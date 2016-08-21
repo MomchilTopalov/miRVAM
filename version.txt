@@ -1,0 +1,7 @@
+miRVAM version 2.1
+(miRNA Verification Analizes and Measurement) 
+
+Firste release	|	06.05.2016
+Last update	|	21.08.2016
+
+

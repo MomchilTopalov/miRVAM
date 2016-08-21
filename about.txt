@@ -1,0 +1,10 @@
+This program provides a simple GUI for one of my early attempts	|
+to write Perl scripts for Bioinformatics. The aim is to open a		|
+FASTA files which contains resuts from sequencing of miRNAs and	|
+to count the sum of all sequences with the same lenght.		|
+
+For more detailed information how to use the programe, pleace	|
+take a look at the shot tutorial which can be found in		|
+Help>Manual>READ_ME
+
+REGARDS FORM DEVELOPER TEAM (ME)
