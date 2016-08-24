@@ -1,4 +1,4 @@
-   # Copyright momchil.topalov@gmail.com Momchil Topalov
+# Copyright momchil.topalov@gmail.com Momchil Topalov
 
    # Licensed under the Apache License, Version 2.0 (the "License");
    # you may not use this file except in compliance with the License.
@@ -45,15 +45,10 @@ my $state = 'disabled';						# BUTTONS` STATE
 my ( $isF, $isR, $isT, $isS, $isMT, ) = ( 0, 0, 0, 0, 0, );	# RADIOBUTTONS VARIABLES
 my ( $redT, $redF, $tabT, $tabF, $matT, $matF, ) 
 = ( 0, 0, 0, 0, 0, 0, );					# RADIOBUTTON FUNCS	
-
 my ( $var1, $var2, $var3, $var4 ) = ( 0, 0, 0, 0, );		# CHECKBUTTON VARIABLES
-
 my ( $scale_from, $scale_to,) = ( 15, 30, );			# INTERVAL
-
 my ( $search_incounter, $search_inmatch ) = ( q{}, q{} );	# SEARCH
-
 my ( %hist_data, @hist_y ) = ( (), () );			# HISTOGRAM ATRIBUTES
-my ( @res_rlc, @res_ref ) = ( (), () );
 my $progress_lvl = 0;						# PROGRESSBAR ATRIBUTES
 my @colors = ( 
 	 0, '#ff002a',  1, '#ff0014',  2, '#ff000a',  3, '#ff0500',  4, '#ff1000',
@@ -80,11 +75,10 @@ my @colors = (
 my @types_img = (
 		[ "Log files", [ qw/.png .jpg/]  ],
 		[ "All files", '*'],
-	);	
+	);							
 Readonly my $line	=> q{"};				# MENU_SEPARATOR
 Readonly my $sp		=> q/ /;				# SPACE
 #	==========	==========	==========	==========	==========	</GLOBAL VARIABLES>
-
 #	==========	==========	==========	==========	==========	<GUI>
 my $mw = new MainWindow();
 $mw -> title( "miRVAM" );
@@ -92,9 +86,7 @@ $mw -> configure(
 	-menu => my $menu_bar =	$mw -> Menu( 
 		-menuitems => menu_bar_items )
 	);
-
 my $fr_len_distribution	= $mw	-> Frame();
-
 my $fr_status	= $fr_len_distribution	-> Frame(
 	-borderwidth	=> 1,	-relief		=> 'groove' 
 	); 
@@ -114,7 +106,6 @@ my $instruction_area	= $fr_status	->Label(
 	); 
 	
 my $fr_control	=  $fr_len_distribution	-> Frame();
-
 my $fr_buttons	= $fr_control	-> Frame(); 		
 my $bttn_open	= $fr_buttons	-> Button(
 	-image	=> $fr_buttons	-> Photo( -file => 'open.jpg' ),
@@ -241,7 +232,7 @@ my $bttn_src_rlc	= $fr_results	->Button(
 my $bttn_saveC	= $fr_results	->Button(
 	-image	=> $fr_results -> Photo( -file =>'save.png' ),
 	-activebackground => 'green',	-state	=> $state,
-	-command => sub{ &SAVE( 'length_distribution.txt', @res_rlc ) },
+	-command => sub{ &save_rlc() },
 	);
 	
 my $fr_progress	= $mw	-> Frame();
@@ -253,7 +244,6 @@ my $progress_rlc	= $fr_progress	-> ProgressBar(
 	-from		=>  0,		-to	=> 100,
 	-anchor		=> 's',		-variable => \$progress_lvl, 
 	);
-
 my $fr_histbox	= $mw	-> Frame();  
 my $listbox	= $fr_histbox	-> Scrolled( 
 	"Listbox",	-scrollbars	=> "e",	
@@ -303,11 +293,9 @@ my $progress_rlc2	= $fr_progress2	-> ProgressBar(
 	);		
 	
 my $fr_refere	= $mw	-> Frame(); 	
-
 my $fr_outer	= $fr_refere	-> Frame(
 	-borderwidth => 2,	-relief	=> 'sunken', 
 	); 
-
 my $fr_outer_rb	= $fr_outer	-> Frame();
 my $lbl_ref_istab	= $fr_outer_rb	-> Label(
 	-text	=> "Reference databaseformat:\n\n",
@@ -325,7 +313,6 @@ my $rbbt_ref_tab	= $fr_outer_rb	 -> Radiobutton(
 	-value	=> 2,		-variable	=> \$isMT,
 	-state	=> $state,	-command	=> sub { ( $matT, $matF, ) = ( 1, 0, ) },
 	);
-
 my $fr_outer_cb	= $fr_outer	-> Frame();
 my $lbl_pattern	= $fr_outer_cb	-> Label(
 	-text	=>  "Output preferences:",
@@ -351,7 +338,6 @@ my $cb4	= $fr_outer_cb -> Checkbutton(
 	-font	=> '-*-Calibri-R-Normal-*-*-12' ,
         -state	=> $state,	-variable	=>\$var4, 
         );	
-
 my $fr_outertxt	= $fr_refere	-> Frame();                 
 my $txt_compare	= $fr_outertxt	-> Scrolled( 
 	"Text",	-borderwidth	=> 2,
@@ -430,7 +416,6 @@ $bl_bttn_reset	-> attach( $bttn_reset,
 	-balloonmsg	=> "Reset",  
 	-statusmsg	=> "Clears all user`s actions and setts the program at start position.", 
 	);
-
 my $bl_bttn_src_rlc	= $fr_results	-> Balloon( -statusbar => $instruction_area );
 $bl_bttn_src_rlc	-> attach( $bttn_reset,
 	-balloonmsg	=> "",  
@@ -441,7 +426,6 @@ $bl_bttn_saceC	-> attach( $bttn_reset,
 	-balloonmsg	=> "",  
 	-statusmsg	=> "",
 	);
-
 my $bl_bttn_show_h	= $fr_histopt	-> Balloon( -statusbar => $instruction_area );
 $bl_bttn_show_h	-> attach( $bttn_show_h,
 	-balloonmsg	=> "",  
@@ -457,7 +441,6 @@ $bl_buttn_save_allh	-> attach( $buttn_save_allh,
 	-balloonmsg	=> "",  
 	-statusmsg	=> "",
 	);
-
 my $bl_bttn_src_ref	= $fr_outertxt	-> Balloon( -statusbar => $instruction_area );
 $bl_bttn_src_ref	-> attach( $bttn_src_ref,
 	-balloonmsg	=> "",  
@@ -479,7 +462,6 @@ $bl_bttn_saveM		-> attach( $bttn_saveM,
 	-statusmsg	=> "",
 	);
 } #	==========	==========	==========	==========	==========	</MOUSEOVER>
-
 { #	==========	==========	==========	==========	==========	<GEOMETRY>
 $fr_len_distribution	-> grid( -row => 1, -column => 1 );
 	$fr_status	-> grid( -row => 1, -column => 1 ); 
@@ -544,7 +526,6 @@ $fr_refere	-> grid( -row => 1, -column => 5 );
 		$bttn_saveM	-> pack( -side => 'left' );
 		$bttn_saveMA	-> pack( -side => 'left' );
 } #	==========	==========	==========	==========	==========	</GEOMETRY>
-
 { #	==========	==========	==========	==========	==========	<CONTROLS>
 $mw -> bind( '<Control-o>', [ \&B_OPEN_DIR	] );
 $mw -> bind( '<Control-c>', [ \&B_COUNT_MIRNA	] );
@@ -555,10 +536,7 @@ $mw -> bind( '<Control-s>', [ \&B_MAS_SAVE	] );
 $mw -> bind( '<Control-r>', [ \&B_RESET_ALL	] );
 $mw -> bind( 'all' => '<Key-Escape>' => sub { exit; } );
 } #	==========	==========	==========	==========	==========	</CONTROLS>
-
-
 MainLoop ();	#	==========	==========	==========	==========	</GUI>
-
 sub	B_OPEN_DIR # ===============================
 # Sets a working directory and gives a description
 # of the content. Sorts fasta from non-fasta files.
@@ -629,7 +607,6 @@ sub	B_OPEN_DIR # ===============================
 	}
 	return();
 }
-
 sub	B_COUNT_MIRNA # ============================
 # Counts all miRNA from (non)redundant data in
 # (non)tabulated format with same length 
@@ -669,7 +646,6 @@ sub	B_COUNT_MIRNA # ============================
 		
 		# 2.1 Sums the copies of all miRNA with same length.
 		$txt_results -> insert( 'end', "\n$files_array[ $j ]\n" );
-		push( @res_rlc, "\n$files_array[ $j ]\n" );
 		open( FILE_ANALYZER, "$dir/$files_array[ $j ]" );
 		while( <FILE_ANALYZER> )
 		{ 
@@ -736,11 +712,10 @@ sub	B_COUNT_MIRNA # ============================
 				
 				$total_copies_percent 
 					= sprintf( "%.2f", ( $seq_len_hash{ $key } / $total_copies ) * 100 );
-				$rlc_tbl -> add( $key, $seq_len_hash{ $key }, $total_copies_percent . "%\n" );
+				$rlc_tbl -> add( $key, $seq_len_hash{ $key }, $total_copies_percent . "%\n" )
 			}
 		}		
-		$rlc_tbl	-> add( "total_copies", $total_copies, "100%" );
-		push( @res_rlc, $rlc_tbl );
+		$rlc_tbl	-> add( "total_copies", $total_copies, "100%" );		
 		$txt_results	-> insert( 'end', $rlc_tbl );
 		
 		# 2.4 Load data for histogram.
@@ -751,9 +726,8 @@ sub	B_COUNT_MIRNA # ============================
 		print chr ( 7 ) if ( $progress_lvl >= 100 );
 		$fr_len_distribution -> update;
 	}
-	# $results_rlc = ( $txt_results );
+	return();
 }
-
 sub	B_HIST_MODE # ==============================
 # Allows to draw and save histograms.
 # ==================================================
@@ -769,7 +743,6 @@ sub	B_HIST_MODE # ==============================
 		);
 	return();
 }
-
 sub	B_MATCH_MODE # =============================
 # Allows to compare samples with referent DB.
 # ==================================================
@@ -777,7 +750,6 @@ sub	B_MATCH_MODE # =============================
 	_widget_activator( $bttn_src_ref,$bttn_match_one, $bttn_match_all 
 		, $cb1, $cb2, $cb3, $cb4, $rbbt_ref_tab, $rbbt_ref_nontab 
 		);
-
 	my @types = ( 
 		[ "Log files", [ qw/.txt .fa .fas .fasta/ ] ],
 		[ "All files",	'*' ],
@@ -789,21 +761,18 @@ sub	B_MATCH_MODE # =============================
 	$referent_DB = $filepath;
 	return();
 }
-
 sub	B_MAS_RUN # ================================
 # 
 # ==================================================
 {
 	return();
 }
-
 sub	B_MAS_SAVE # ===============================
 #
 # ==================================================
 {
 	return();
 }
-
 sub	B_RESET_ALL # ==============================
 #
 # ==================================================
@@ -826,7 +795,6 @@ sub	B_RESET_ALL # ==============================
 		, $rbbt_ref_nontab, $rbbt_ref_tab, $cb1, $cb2, $cb3, $cb4, $bttn_src_ref
 		, $bttn_match_one, $bttn_match_all, $bttn_saveM, $bttn_saveMA,
 		);
-
 	$fr_histbox -> Label( -width => 58, -height => 27, )-> grid( -row => 4, -column => 1 );
 	
 	$listbox	-> delete( 0, 'end' );
@@ -839,7 +807,6 @@ sub	B_RESET_ALL # ==============================
 	$mw	->update();
 	return();
 }
-
 sub	H_show_hist # ==============================
 # 
 # ==================================================
@@ -854,7 +821,6 @@ sub	H_show_hist # ==============================
 		);
 	$histogram -> Label( -image => $png ) -> grid ( -row => 1, -column => 1 );
 }
-
 sub	H_save_oneh # ==============================
 # 
 # ==================================================
@@ -871,14 +837,13 @@ sub	H_save_oneh # ==============================
 	my $png = _hist( 
 		$listbox -> get( $listbox -> curselection )
 		, %hist_data 
-	) -> png;
+	) ->png;
 	
 	open( my $out, '>', $filepath );
 	binmode $out;
 	print $out $png;
 	close $out;
 }
-
 sub	H_save_allh # ==============================
 # 
 # ==================================================
@@ -943,7 +908,6 @@ sub	_hist # ==============================
 		}
 	}
 }
-
 sub	M_match_one # ==============================
 # 
 # ==================================================
@@ -951,7 +915,8 @@ sub	M_match_one # ==============================
 	$txt_compare -> delete( '0.0', 'end' );
 	my $fasta=$listbox -> get( $listbox -> curselection );
 	_match( $fasta );
-}
+	return();
+ }
  
 sub	M_match_all # ==============================
 #
@@ -964,16 +929,13 @@ sub	M_match_all # ==============================
 	{
 		_match( $elements[ $i ] );
 	}
+	return();
 }
-
 sub	M_save_match_one # =========================
 # 
 # ==================================================
 {
-	my $sample = $listbox -> get( $listbox -> curselection );
-	$sample =~ s/.fa//;
-	$sample = "$sample-refDB.csv";
-	SAVE( $sample, @res_ref );
+	return();
 }
 sub	M_save_match_all # =========================
 # 
@@ -981,141 +943,34 @@ sub	M_save_match_all # =========================
 {
 	return();
 }
-
-sub	_match # ===================================
+sub	save_rlc # =================================
 # 
 # ==================================================
 {
-	_widget_activator( $bttn_src_ref, $bttn_saveM, );
+	# my $toPrint= $_[ 0 ];
 	
-	my ( %ref_db, %sampleHash, ) = ( (), () ); 
-	my ( $refID, $refS, $sampleID, $sampleS, ) = ( q{}, q{}, q{}, q{}, );
-	my @matches = ();
-	
-	open( REF_DB, '<', $referent_DB );
-	while( <REF_DB> )
-	{	
-		chomp;	
-		if( $matF eq 1 )
-		{		
-			if( $_ =~ /^>(.+)/ )
-			{
-				$refID = $_;
-			}
-			else
-			{
-				$ref_db{ $_ } = $refID;
-			}
-			
-		}
-		elsif( $matT eq 1 )
-		{
-			my @rowcols = split ( "\t", $_ );
-			$ref_db{ $rowcols[ 1 ] } = $rowcols[ 0 ];
-		}
-		else
-		{
-			_widget_deactivator( $bttn_src_ref, $bttn_saveM, $bttn_saveMA );
-			$txt_status -> delete( '0.0', 'end' );
-			$txt_status -> insert( 'end', "WARNING ! ! ! \n\n"
-				. "Missing tabulation format\nfor the referent DB\n"
-				."Pleace, choose a tabulation format.\n"
-				);
-		}
-	}
-	close REF_DB;
-	
-	open( SAMPLE, '<', "$workspace/@_" );
-	while( <SAMPLE> )
+	my $types = [ 
+		[ '.csv', '.txt' ],
+		[ 'All Files', '*' ],
+	];
+	my $save = $mw -> getSaveFile(-filetypes => $types, 
+                             -initialfile => 'test',
+                             -defaultextension => '.txt');
+	my$filename = 'save.txt';
+	open	( FH, "+>$filename" );
+	while	( <FH> )
 	{
-		chomp;
-		if( $tabF eq 1 )
-		{
-			if( $_ =~ /^>(.+)/ )
-			{ 
-				$sampleID = $_;
-			}
-			else
-			{ 
-				$sampleS = $_;
-		      
-			$sampleS =~tr/T/U/;
-			$sampleHash{ $sampleS} = $sampleID;
-			}
-		}
-		elsif( $tabT eq 1 )
-		{
-			my @rowcols = split ( "\t", $_ );
-			$rowcols[ 1 ] =~tr/T/U/;
-			$sampleHash{ $rowcols[ 1 ] } = $rowcols[ 0 ];	
-		}
+		binmode $txt_results;
+		print "$txt_results\n";
 	}
-	close SAMPLE;
-	
-	foreach( keys %sampleHash ) 
-	{
-		push( @matches, $_ ) if exists $ref_db{ $_ };
-	}
-	
-	$txt_compare -> insert( 'end', "[ @_ ] is compared to referent DB\n[ $referent_DB ]\n\n" );
-	push( @res_ref, "[ @_ ] - [ $referent_DB ]\n" );
-	for( my $k = 0; $k <= $#matches; $k++ )
-	{	
-		my $matched_seq_len = length( $matches[ $k ] );	
-		if( $var1 eq 1 )
-		{	
-			$txt_compare -> insert( 'end', "$ref_db{ $matches[ $k ] }\t" );
-			push( @res_ref, "$ref_db{ $matches[ $k ] },");
-		}
-		if( $var2 eq 1 )
-		{
-			$txt_compare -> insert( 'end', "$sampleHash{ $matches[ $k ] }\t" );
-			push( @res_ref, "$sampleHash{ $matches[ $k ] }," );
-		}
-		if( $var3 eq 1 )
-		{
-			$txt_compare -> insert( 'end', "$matches[ $k ]\t" );
-			push( @res_ref, "$matches[ $k ]," );
-		}
-		if( $var4 eq 1 )
-		{
-			$txt_compare -> insert( 'end', "$matched_seq_len" );
-			push( @res_ref, "$matched_seq_len," );
-		}
-		$txt_compare -> insert( 'end', "\n" );		
-		push( @res_ref, "\n" );
-	}
+	close FH;
+	# return $toPrint;
 }
-
-sub	SAVE # =================================
-# 
-# ==================================================
-{
-	my ( $file_name, @toPrint, ) = @_;
-	# my $file_name = 'report.txt';
-	
-	my @type = (
-		[ "Log files", [ qw/.txt .csv/ ] ],
-		[ "All files", '*'],
-	);
-	
-	my $file_path = $mw -> getSaveFile(
-		-filetypes	=> \@type,
-		-initialfile	=> $file_name,
-                ) or return();
-	
-	open( my $fh, '>', $file_path );
-	print $fh @toPrint;
-	close $fh;
-	# return( $file_path );
-}
-
 sub	menu_bar_items # ===========================
 # The MENU of the program.
 # ==================================================
 {
 	[ map [ 'cascade', $_ -> [ 0 ], -menuitems => $_ -> [ 1 ] ],
-
 	[ '~File',
 		[
 			[ qw/command Open -command/	=> \&open_dir		],	$line,
@@ -1191,8 +1046,94 @@ sub	menu_bar_items # ===========================
 	],
 ];
 }
-
-
+sub	_match # ===================================
+# 
+# ==================================================
+{
+	_widget_activator( $bttn_src_ref, $bttn_saveM, );
+	
+	my ( %ref_db, %sampleHash, ) = ( (), () ); 
+	my ( $refID, $refS, $sampleID, $sampleS, ) = ( q{}, q{}, q{}, q{}, );
+	my @matches = ();
+	
+	open( REF_DB, '<', $referent_DB );
+	while( <REF_DB> )
+	{	
+		chomp;	
+		if( $matF eq 1 )
+		{		
+			if( $_ =~ /^>(.+)/ )
+			{
+				$refID = $_;
+			}
+			else
+			{
+				$ref_db{ $_ } = $refID;
+			}
+			
+		}
+		elsif( $matT eq 1 )
+		{
+			my @rowcols = split ( "\t", $_ );
+			$ref_db{ $rowcols[ 1 ] } = $rowcols[ 0 ];
+		}
+		else
+		{
+			_widget_deactivator( $bttn_src_ref, $bttn_saveM, $bttn_saveMA );
+			$txt_status -> delete( '0.0', 'end' );
+			$txt_status -> insert( 'end', "WARNING ! ! ! \n\n"
+				. "Missing tabulation format\nfor the referent DB\n"
+				."Pleace, choose a tabulation format.\n"
+				);
+		}
+	}
+	close REF_DB;
+	
+	open( SAMPLE, '<', "$workspace/@_" );
+	while( <SAMPLE> )
+	{
+		chomp;
+		if( $tabF eq 1 )
+		{
+			if( $_ =~ /^>(.+)/ )
+			{ 
+				$sampleID = $_;
+			}
+			else
+			{ 
+				$sampleS = $_;
+		      
+			$sampleS =~tr/T/U/;
+			$sampleHash{ $sampleS} = $sampleID;
+			}
+		}
+		elsif( $tabT eq 1 )
+		{
+			my @rowcols = split ( "\t", $_ );
+			$rowcols[ 1 ] =~tr/T/U/;
+			$sampleHash{ $rowcols[ 1 ] } = $rowcols[ 0 ];	
+		}
+	}
+	close SAMPLE;
+	
+	foreach( keys %sampleHash ) 
+	{
+		push( @matches, $_ ) if exists $ref_db{ $_ };
+	}
+	
+	my $tbl_match = Text::Table -> new();
+	$txt_compare -> insert( 'end', "[ @_ ] is compared to referent DB\n[$referent_DB]\n\n" );
+	for( my $k = 0; $k <= $#matches; $k++ )
+	{		
+		my $matched_seq_len = length( $matches[ $k ] );
+		$txt_compare -> insert( 'end', "$ref_db{ $matches[ $k ] }\t" )		if $var1 eq 1;
+		$txt_compare -> insert( 'end', "$sampleHash{ $matches[ $k ] }\t" )	if $var2 eq 1;
+		$txt_compare -> insert( 'end', "$matches[ $k ]\t" )			if $var3 eq 1;
+		$txt_compare -> insert( 'end', "$matched_seq_len" )			if $var4 eq 1;
+		$txt_compare -> insert( 'end', "\n" );		
+	}
+	return();		
+}
 sub	search # ===================================
 # 
 # ==================================================
@@ -1230,13 +1171,11 @@ sub	search # ===================================
 	$be_widjet -> selectionRange( 0, 'end' ); # Select word we just typed/selected
 	return();
 }
-
 sub	window # ===================================
 # Opens a window with label of single .txt file on it.
 # ==================================================
 {
 	my ( $ttl, $txt ) = @_;
-
 	my $win	= new MainWindow( -title => $ttl );
 	my $frm	= $win -> Frame() -> pack();
 	my $lbl	= q{};
@@ -1250,7 +1189,6 @@ sub	window # ===================================
 	close IN;
 	return();
 }
-
 sub	pdf_handler # ==============================
 # 
 # ==================================================
@@ -1260,7 +1198,6 @@ sub	pdf_handler # ==============================
 	MainLoop();
 	return();
 }
-
 sub	_widget_activator # ========================
 # Unlocks an arrey of widgets for further usage.
 # ==================================================
@@ -1272,7 +1209,6 @@ sub	_widget_activator # ========================
 	}
 	return();
 }
-
 sub	_widget_deactivator # ======================
 # Locks an arrey of widgets for further usage.
 # ==================================================
