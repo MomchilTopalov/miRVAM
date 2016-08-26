@@ -47,9 +47,7 @@ my ( $var1, $var2, $var3, $var4 ) = ( 0, 0, 0, 0, );		# CHECKBUTTON VARIABLES
 my ( $scale_from, $scale_to,) = ( 15, 30, );			# INTERVAL
 my ( $search_incounter, $search_inmatch ) = ( q{}, q{} );	# SEARCH
 my ( %hist_data, @hist_y ) = ( (), () );			# HISTOGRAM ATRIBUTES
-my ( @res_rlc,
-# @res_ref
- ) = ( (), () );				# &SAVE VARIABLES
+my @res_rlc = ();						# &SAVE VARIABLES
 my $progress_lvl = 0;						# PROGRESSBAR VARIABLES
 my @colors = ( 
 	 0, '#ff002a',  1, '#ff0014',  2, '#ff000a',  3, '#ff0500',  4, '#ff1000',
@@ -89,9 +87,7 @@ $mw -> configure(
 		-menuitems => menu_bar_items )
 	);
 
-my $fr_len_distribution	= $mw	-> Frame(
-	# -borderwidth	=> 3,	-relief		=> 'groove' 
-	); 
+my $fr_len_distribution	= $mw	-> Frame(); 
 
 my $fr_status	= $fr_len_distribution	-> Frame(); 
 my $txt_status	= $fr_status	-> Scrolled( 
@@ -104,6 +100,7 @@ $txt_status	-> insert('end', "Welcome to miRVAM.\n"
 	. "$time\nis an excellent time to do science!\n\n"
 	. "Pleace,choose the directory with your\nFASTA files.\n" 
 	);
+	
 my $fr_buttons	= $fr_len_distribution	-> Frame(); 		
 my $bttn_open	= $fr_buttons	-> Button(
 	-image	=> $fr_buttons	-> Photo( -file => 'open.jpg' ),
@@ -241,7 +238,7 @@ my $listbox	= $fr_histbox	-> Scrolled(
 	-selectbackground	=> 'lightgreen',	
 	-selectborderwidth	=>  3, 
 	);
-my $instruction_area	= $fr_histbox	->Label(
+my $lbl_info	= $fr_histbox	->Label(
 	-width		=> 63,	-height		=> 5,
 	-borderwidth	=>  2,	-relief 	=> 'groove', 
 	); 
@@ -362,80 +359,70 @@ my $bttn_match_all	= $fr_outertxt	->Button(
 	-command	=> \&M_match_all, 
 	);
 { #	==========	==========	==========	==========	==========	<MOUSEOVER>
-my $bl_bttn_open	= $fr_buttons	-> Balloon( -statusbar => $instruction_area );
+my $bl_bttn_open	= $fr_buttons	-> Balloon( -statusbar => $lbl_info );
 $bl_bttn_open -> attach( $bttn_open,
 	-balloonmsg	=> "Open Dir",  
 	-statusmsg	=> "Browses for the directory \nwith files of sequenced miRNA samples.",
 	);	
-my $bl_bttn_count	= $fr_buttons	-> Balloon( -statusbar => $instruction_area );
+my $bl_bttn_count	= $fr_buttons	-> Balloon( -statusbar => $lbl_info );
 $bl_bttn_count	-> attach( $bttn_count,
 	-balloonmsg	=> "Run theCounter",  
 	-statusmsg	=> "Counts the number of all sequences with the same length for each sample.",
 	);	
-my $bl_bttn_hmode	= $fr_buttons	-> Balloon( -statusbar => $instruction_area );
+my $bl_bttn_hmode	= $fr_buttons	-> Balloon( -statusbar => $lbl_info );
 $bl_bttn_hmode	-> attach( $bttn_hmode,
 	-balloonmsg	=> "Histogram mode",  
 	-statusmsg	=> "Allows you to draw histograms with the results of the counting and save them.",
 	);	
-my $bl_bttn_mmode	= $fr_buttons	-> Balloon( -statusbar => $instruction_area );
+my $bl_bttn_mmode	= $fr_buttons	-> Balloon( -statusbar => $lbl_info );
 $bl_bttn_mmode	-> attach( $bttn_mmode,
 	-balloonmsg	=> "Sequence match mode",  
 	-statusmsg	=> "Compares your data with outer list of miRNAs and and shows which are present.", 
 	);	
-# my $bl_bttn_masrun	= $fr_buttons	-> Balloon( -statusbar => $instruction_area );
-# $bl_bttn_masrun	-> attach( $bttn_masrun,
-	# -balloonmsg	=> "Masive analizes",  
-	# -statusmsg	=> "Runs all  the features at once.",
-	# );	
-# my $bl_bttn_massave	= $fr_buttons	-> Balloon( -statusbar => $instruction_area );
-# $bl_bttn_massave	-> attach( $bttn_massave,
-	# -balloonmsg	=> "Save all",  
-	# -statusmsg	=> "Saves all results after the masive analizes.",
-	# );	
-my $bl_bttn_reset	= $fr_buttons	-> Balloon( -statusbar => $instruction_area );
+my $bl_bttn_reset	= $fr_buttons	-> Balloon( -statusbar => $lbl_info );
 $bl_bttn_reset	-> attach( $bttn_reset,
 	-balloonmsg	=> "Reset",  
 	-statusmsg	=> "Clears all user`s actions and setts the program at start position.", 
 	);
 
-my $bl_bttn_src_rlc	= $fr_results	-> Balloon( -statusbar => $instruction_area );
+my $bl_bttn_src_rlc	= $fr_results	-> Balloon( -statusbar => $lbl_info );
 $bl_bttn_src_rlc	-> attach( $bttn_reset,
 	-balloonmsg	=> "",  
 	-statusmsg	=> "",
 	);
-my $bl_bttn_saceC	= $fr_results	-> Balloon( -statusbar => $instruction_area );
+my $bl_bttn_saceC	= $fr_results	-> Balloon( -statusbar => $lbl_info );
 $bl_bttn_saceC	-> attach( $bttn_reset,  
 	-balloonmsg	=> "",  
 	-statusmsg	=> "",
 	);
 
-my $bl_bttn_show_h	= $fr_histopt	-> Balloon( -statusbar => $instruction_area );
+my $bl_bttn_show_h	= $fr_histopt	-> Balloon( -statusbar => $lbl_info );
 $bl_bttn_show_h	-> attach( $bttn_show_h,
 	-balloonmsg	=> "",  
 	-statusmsg	=> "",
 	);
-my $bl_bttn_save_oneh	= $fr_histopt	-> Balloon( -statusbar => $instruction_area );
+my $bl_bttn_save_oneh	= $fr_histopt	-> Balloon( -statusbar => $lbl_info );
 $bl_bttn_save_oneh	-> attach( $bttn_save_oneh,
 	-balloonmsg	=> "",  
 	-statusmsg	=> "",
 	);
-my $bl_buttn_save_allh	= $fr_histopt	-> Balloon( -statusbar => $instruction_area );
+my $bl_buttn_save_allh	= $fr_histopt	-> Balloon( -statusbar => $lbl_info );
 $bl_buttn_save_allh	-> attach( $buttn_save_allh,
 	-balloonmsg	=> "",  
 	-statusmsg	=> "",
 	);
 
-my $bl_bttn_src_ref	= $fr_outertxt	-> Balloon( -statusbar => $instruction_area );
+my $bl_bttn_src_ref	= $fr_outertxt	-> Balloon( -statusbar => $lbl_info );
 $bl_bttn_src_ref	-> attach( $bttn_src_ref,
 	-balloonmsg	=> "",  
 	-statusmsg	=> "",
 	);
-my $bl_bttn_match_one	= $fr_outertxt	-> Balloon( -statusbar => $instruction_area );
+my $bl_bttn_match_one	= $fr_outertxt	-> Balloon( -statusbar => $lbl_info );
 $bl_bttn_match_one	-> attach( $bttn_match_one,
 	-balloonmsg	=> "",  
 	-statusmsg	=> "",
 	);
-my $bl_bttn_match_all	= $fr_outertxt	-> Balloon( -statusbar => $instruction_area );
+my $bl_bttn_match_all	= $fr_outertxt	-> Balloon( -statusbar => $lbl_info );
 $bl_bttn_match_all	-> attach( $bttn_match_all,
 	-balloonmsg	=> "",  
 	-statusmsg	=> "",
@@ -473,7 +460,7 @@ $fr_progress 	-> grid( -row => 1, -column => 2 );
 	$progress_rlc	-> grid( -row => 1, -column => 1 );
 $fr_histbox	-> grid( -row => 1, -column => 3 );  
 	$listbox	-> grid( -row => 1, -column => 1 );
-	$instruction_area	-> grid( -row => 2, -column => 1 );
+	$lbl_info	-> grid( -row => 2, -column => 1 );
 	$fr_histopt	-> grid( -row => 3, -column => 1 );
 		$bttn_show_h	-> grid( -row => 1, -column => 1 );  
 		$bttn_save_oneh	-> grid( -row => 1, -column => 2 );  
@@ -598,9 +585,7 @@ sub	B_COUNT_MIRNA # ============================
 	# 1.  Check for missing working directory and (un)lock widgets;
 	if( $workspace eq q{} )
 	{
-		_widget_deactivator( $bttn_hmode, 
-		######################################################$bttn_masrun, 
-		$bttn_save_oneh, );
+		_widget_deactivator( $bttn_hmode, $bttn_save_oneh, );
 		
 		$txt_results	-> delete( '0.0', 'end' );
 		$txt_status	-> delete( '0.0', 'end' );
@@ -774,12 +759,11 @@ sub	B_RESET_ALL # ==============================
 	$progress_lvl = 0;				
 	
 	_widget_deactivator(
-		$bttn_count,$bttn_hmode, $bttn_mmode,####################$bttn_masrun
-		############################################, $bttn_massave,
-		 $rbttn_nontab, $rbbtn_tab, $rbttn_red
-		, $rbttn_nonred, $scale_down, $scale_up, $bttn_src_rlc
-		, $bttn_saveC, $bttn_show_h, $bttn_save_oneh, $buttn_save_allh
-		, $rbbt_ref_nontab, $rbbt_ref_tab, $cb1, $cb2, $cb3, $cb4, $bttn_src_ref
+		$bttn_count,$bttn_hmode, $bttn_mmode,$rbttn_nontab
+		, $rbbtn_tab, $rbttn_red, $rbttn_nonred, $scale_down
+		, $scale_up, $bttn_src_rlc, $bttn_saveC, $bttn_show_h
+		, $bttn_save_oneh, $buttn_save_allh, $rbbt_ref_nontab
+		, $rbbt_ref_tab, $cb1, $cb2, $cb3, $cb4, $bttn_src_ref
 		, $bttn_match_one, $bttn_match_all,
 		);
 
@@ -966,19 +950,6 @@ sub	M_match_all # ==============================
 	}
 	elsif( !defined $answer )	{ return(); }
 }
-
-
-# sub	M_save_match_all # =========================
-# # 
-# # ==================================================
-# {
-	# my @r = split "\n\n", @res_ref;
-	
-	# print $res_ref[0]."--0\n";
-	# print $res_ref[1]."--1\n";
-	# print $res_ref[2]."--2\n";
-	
-# }
 
 sub	_match # ===================================
 # 
