@@ -1,4 +1,4 @@
-# Copyright momchil.topalov@gmail.com Momchil Topalov
+   # Copyright momchil.topalov@gmail.com Momchil Topalov
 
    # Licensed under the Apache License, Version 2.0 (the "License");
    # you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ use Tk::JPEG;
 use Tk::ProgressBar;
 use Tk::Balloon;
 use Tk::BrowseEntry;
+use Tk::Dialog;
 use Text::Table;
 use MIME::Base64;
 use GD::Graph;
@@ -36,20 +37,20 @@ use GD::Graph::bars;
 
 #	==========	==========	==========	==========	==========	<GLOBAL VARIABLES>
 my $time = localtime ();					# FOR WELCOMING MESSAGE
-
 my ( @dir_content, @fasta_array ) = ( (), () );			# FILE VERIFICATION
-my ( $workspace, $referent_DB ) = ( q{}, q{} );			# FILEHANDLER ATRIBUTES
-
+my ( $workspace, $referent_DB ) = ( q{}, q{} );			# FILEHANDLER VARIABLES
 my $state = 'disabled';						# BUTTONS` STATE
-
 my ( $isF, $isR, $isT, $isS, $isMT, ) = ( 0, 0, 0, 0, 0, );	# RADIOBUTTONS VARIABLES
 my ( $redT, $redF, $tabT, $tabF, $matT, $matF, ) 
-= ( 0, 0, 0, 0, 0, 0, );					# RADIOBUTTON FUNCS	
+	= ( 0, 0, 0, 0, 0, 0, );				# RADIOBUTTON FUNCS	
 my ( $var1, $var2, $var3, $var4 ) = ( 0, 0, 0, 0, );		# CHECKBUTTON VARIABLES
 my ( $scale_from, $scale_to,) = ( 15, 30, );			# INTERVAL
 my ( $search_incounter, $search_inmatch ) = ( q{}, q{} );	# SEARCH
 my ( %hist_data, @hist_y ) = ( (), () );			# HISTOGRAM ATRIBUTES
-my $progress_lvl = 0;						# PROGRESSBAR ATRIBUTES
+my ( @res_rlc,
+# @res_ref
+ ) = ( (), () );				# &SAVE VARIABLES
+my $progress_lvl = 0;						# PROGRESSBAR VARIABLES
 my @colors = ( 
 	 0, '#ff002a',  1, '#ff0014',  2, '#ff000a',  3, '#ff0500',  4, '#ff1000',
 	 5, '#ff1b00',  6, '#ff3000',  7, '#ff3b00',  8, '#ff4600',  9, '#ff5100',
@@ -75,24 +76,27 @@ my @colors = (
 my @types_img = (
 		[ "Log files", [ qw/.png .jpg/]  ],
 		[ "All files", '*'],
-	);							
+	);	
 Readonly my $line	=> q{"};				# MENU_SEPARATOR
 Readonly my $sp		=> q/ /;				# SPACE
 #	==========	==========	==========	==========	==========	</GLOBAL VARIABLES>
+
 #	==========	==========	==========	==========	==========	<GUI>
-my $mw = new MainWindow();
+my $mw = new MainWindow( -background => 'red');
 $mw -> title( "miRVAM" );
 $mw -> configure( 
 	-menu => my $menu_bar =	$mw -> Menu( 
 		-menuitems => menu_bar_items )
 	);
-my $fr_len_distribution	= $mw	-> Frame();
-my $fr_status	= $fr_len_distribution	-> Frame(
-	-borderwidth	=> 1,	-relief		=> 'groove' 
+
+my $fr_len_distribution	= $mw	-> Frame(
+	# -borderwidth	=> 3,	-relief		=> 'groove' 
 	); 
+
+my $fr_status	= $fr_len_distribution	-> Frame(); 
 my $txt_status	= $fr_status	-> Scrolled( 
-	"Text", -borderwidth	=> 2,
-	-width		=> 46,	-height		=> 7,	
+	"Text", -borderwidth	=> 1,
+	-width		=> 37,	-height		=> 7,	
 	-padx		=> 15, 	-pady		=> 5,	
 	-scrollbars	=> "e",	-background	=> 'grey90',
 	);
@@ -100,13 +104,7 @@ $txt_status	-> insert('end', "Welcome to miRVAM.\n"
 	. "$time\nis an excellent time to do science!\n\n"
 	. "Pleace,choose the directory with your\nFASTA files.\n" 
 	);
-my $instruction_area	= $fr_status	->Label(
-	-width		=> 61,	-height		=> 3,
-	-borderwidth	=>  2,	-relief 	=> 'groove', 
-	); 
-	
-my $fr_control	=  $fr_len_distribution	-> Frame();
-my $fr_buttons	= $fr_control	-> Frame(); 		
+my $fr_buttons	= $fr_len_distribution	-> Frame(); 		
 my $bttn_open	= $fr_buttons	-> Button(
 	-image	=> $fr_buttons	-> Photo( -file => 'open.jpg' ),
 	-activebackground => 'yellow',	
@@ -127,23 +125,13 @@ my $bttn_mmode	= $fr_buttons	-> Button(
 	-activebackground => 'yellow',	-state	=> $state,
 	-command	=> \&B_MATCH_MODE, 
 	);
-my $bttn_masrun	= $fr_buttons	-> Button(
-	-image	=> $fr_buttons	-> Photo( -file => 'masrun.jpg' ),
-	-activebackground => 'yellow',	-state	=> $state,
-	-command	=> \&B_MAS_RUN, 
-	);
-my $bttn_massave	= $fr_buttons	-> Button(
-	-image	=> $fr_buttons	-> Photo( -file => 'massave.jpg' ),
-	-activebackground => 'yellow',	-state	=> $state,
-	-command	=> \&B_MAS_SAVE, 
-	);
 my $bttn_reset	= $fr_buttons	-> Button(
 	-image	=> $fr_buttons	-> Photo( -file => 'reset.jpg' ),
 	-activebackground => 'yellow',
 	-command	=> \&B_RESET_ALL, 
 	);
 	
-my $fr_options	= $fr_control	-> Frame( 
+my $fr_options	= $fr_len_distribution	-> Frame( 
 	-borderwidth	=> 1,	-relief		=> 'groove' , 
 	);
 	
@@ -192,7 +180,7 @@ my $scale_down	= $fr_scale	-> Scale(
 	);
 my $scale_label	= $fr_scale	-> Label(
 	-text	=> "\n\n>  Interval  >",
-	-font	=> '-*-Calibri-R-Normal-*-*-17' , 
+	-font	=> '-*-Calibri-R-Normal-*-*-16' , 
 	);
 my $scale_up	= $fr_scale	-> Scale(
 	-label	=>"Max [ 25, 30 ]",
@@ -206,7 +194,7 @@ my $scale_up	= $fr_scale	-> Scale(
 my $fr_results	= $fr_options	-> Frame();		
 my $txt_results	= $fr_results	-> Scrolled(
 	'Text',	-scrollbars => 'e',
-	-width	=>36,	-height => 21, 
+	-width	=> 37,	-height => 21, 
 	-padx	=> 15,	-pady	=>  5,
 	-borderwidth	=> 1, 
 	);
@@ -221,7 +209,7 @@ $txt_results ->tagConfigure(
 	-foreground	=> $txt_results -> cget( -selectforeground	), 
 	);
 my $be_rlc	= $fr_results	-> BrowseEntry(
-	-width	=> 29,	-borderwidth=> 2,
+	-width	=> 30,	-borderwidth=> 2,
 	-variable	=> \$search_incounter, 
 	);
 my $bttn_src_rlc	= $fr_results	->Button(
@@ -232,18 +220,19 @@ my $bttn_src_rlc	= $fr_results	->Button(
 my $bttn_saveC	= $fr_results	->Button(
 	-image	=> $fr_results -> Photo( -file =>'save.png' ),
 	-activebackground => 'green',	-state	=> $state,
-	-command => sub{ &save_rlc() },
+	-command => sub{ &SAVE( 'length_distribution.txt', @res_rlc ) },
 	);
 	
 my $fr_progress	= $mw	-> Frame();
 my $progress_rlc	= $fr_progress	-> ProgressBar(
 	-borderwidth	=>  2,		-blocks	=> 100, 
 	-troughcolor	=> 'white',	-colors	=> \@colors,
-	-width		=> 15,		-length => 620,
+	-width		=> 15,		-length => 631,
 	-relief 	=> 'sunken',	-gap	=>   0,
 	-from		=>  0,		-to	=> 100,
 	-anchor		=> 's',		-variable => \$progress_lvl, 
 	);
+
 my $fr_histbox	= $mw	-> Frame();  
 my $listbox	= $fr_histbox	-> Scrolled( 
 	"Listbox",	-scrollbars	=> "e",	
@@ -252,12 +241,10 @@ my $listbox	= $fr_histbox	-> Scrolled(
 	-selectbackground	=> 'lightgreen',	
 	-selectborderwidth	=>  3, 
 	);
-my $lbl_histbox	= $fr_histbox	 -> Label(
-	-width		=> 48,	-height	=>  3,
-	-borderwidth	=>  1,	-relief	=> 'sunken',
-	-text	=> "Reads\t:\t|\nSize\t:\t|",
-	-font	=> '-*-Calibri-R-Normal-*-*-16', 
-	);
+my $instruction_area	= $fr_histbox	->Label(
+	-width		=> 63,	-height		=> 5,
+	-borderwidth	=>  2,	-relief 	=> 'groove', 
+	); 
 	
 my $fr_histopt	= $fr_histbox	-> Frame();	
 my $bttn_show_h	= $fr_histopt	-> Button(
@@ -286,20 +273,22 @@ my $fr_progress2	= $mw	-> Frame();
 my $progress_rlc2	= $fr_progress2	-> ProgressBar(
 	-borderwidth	=>  2,		-blocks	=> 100, 
 	-troughcolor	=> 'white',	-colors	=> \@colors,
-	-width		=> 15,		-length => 620,
+	-width		=> 15,		-length => 631,
 	-relief 	=> 'sunken',	-gap	=>   0,
 	-from		=>  0,		-to	=> 100,
 	-anchor		=> 's',		-variable => \$progress_lvl, 
 	);		
 	
 my $fr_refere	= $mw	-> Frame(); 	
+
 my $fr_outer	= $fr_refere	-> Frame(
-	-borderwidth => 2,	-relief	=> 'sunken', 
+	-borderwidth	=> 1,	-relief	=> 'sunken', 
 	); 
+
 my $fr_outer_rb	= $fr_outer	-> Frame();
 my $lbl_ref_istab	= $fr_outer_rb	-> Label(
-	-text	=> "Reference databaseformat:\n\n",
-	-font	=> '-*-Calibri-R-Normal-*-*-17' , 
+	-text	=> "Referent DB format:\n\n",
+	-font	=> '-*-Calibri-R-Normal-*-*-16' , 
 	);
 my $rbbt_ref_nontab	= $fr_outer_rb	 -> Radiobutton(
 	-text	=> "Non-tabulated\t|",
@@ -313,10 +302,11 @@ my $rbbt_ref_tab	= $fr_outer_rb	 -> Radiobutton(
 	-value	=> 2,		-variable	=> \$isMT,
 	-state	=> $state,	-command	=> sub { ( $matT, $matF, ) = ( 1, 0, ) },
 	);
+
 my $fr_outer_cb	= $fr_outer	-> Frame();
 my $lbl_pattern	= $fr_outer_cb	-> Label(
 	-text	=>  "Output preferences:",
-	-font	=> '-*-Calibri-R-Normal-*-*-17' ,
+	-font	=> '-*-Calibri-R-Normal-*-*-16' ,
 	);	
 my $cb1	= $fr_outer_cb -> Checkbutton(
 	-text	=> "Ref DB miRNA header\t|",
@@ -338,10 +328,11 @@ my $cb4	= $fr_outer_cb -> Checkbutton(
 	-font	=> '-*-Calibri-R-Normal-*-*-12' ,
         -state	=> $state,	-variable	=>\$var4, 
         );	
+
 my $fr_outertxt	= $fr_refere	-> Frame();                 
 my $txt_compare	= $fr_outertxt	-> Scrolled( 
 	"Text",	-borderwidth	=> 2,
-	-width		=> 66,	-height		=> 32, 	
+	-width		=> 65,	-height		=> 33, 	
 	-padx		=> 15,	-pady		=>  5,
 	-scrollbars	=> "e",	-background	=> 'grey98', 
 	);
@@ -352,7 +343,7 @@ $txt_compare -> tagConfigure(
 	-foreground	=> $txt_compare -> cget( -selectforeground	), 
 	);
 my $be_match	= $fr_outertxt	-> BrowseEntry(
-	-width	=> 23,
+	-width	=> 44,
 	-variable	=> \$search_inmatch, 
 	);
 my $bttn_src_ref	= $fr_outertxt	-> Button(
@@ -369,16 +360,6 @@ my $bttn_match_all	= $fr_outertxt	->Button(
 	-image	=> $fr_outertxt -> Photo( -file	=>'match_all.png' ),
 	-activebackground	=> 'orange',	-state	=> $state,
 	-command	=> \&M_match_all, 
-	);
-my $bttn_saveM	= $fr_outertxt	-> Button(
-	-image	=> $fr_outertxt -> Photo( -file	=>'save.png' ),
-	-activebackground	=> 'green',	-state	=> $state,
-	-command	=> \&M_save_match_one, 
-	);
-my $bttn_saveMA	= $fr_outertxt	-> Button(
-	-image	=> $fr_outertxt -> Photo( -file	=>'save.png' ),
-	-activebackground	=> 'green',	-state	=> $state,
-	-command	=> \&M_save_match_all, 
 	);
 { #	==========	==========	==========	==========	==========	<MOUSEOVER>
 my $bl_bttn_open	= $fr_buttons	-> Balloon( -statusbar => $instruction_area );
@@ -401,21 +382,22 @@ $bl_bttn_mmode	-> attach( $bttn_mmode,
 	-balloonmsg	=> "Sequence match mode",  
 	-statusmsg	=> "Compares your data with outer list of miRNAs and and shows which are present.", 
 	);	
-my $bl_bttn_masrun	= $fr_buttons	-> Balloon( -statusbar => $instruction_area );
-$bl_bttn_masrun	-> attach( $bttn_masrun,
-	-balloonmsg	=> "Masive analizes",  
-	-statusmsg	=> "Runs all  the features at once.",
-	);	
-my $bl_bttn_massave	= $fr_buttons	-> Balloon( -statusbar => $instruction_area );
-$bl_bttn_massave	-> attach( $bttn_massave,
-	-balloonmsg	=> "Save all",  
-	-statusmsg	=> "Saves all results after the masive analizes.",
-	);	
+# my $bl_bttn_masrun	= $fr_buttons	-> Balloon( -statusbar => $instruction_area );
+# $bl_bttn_masrun	-> attach( $bttn_masrun,
+	# -balloonmsg	=> "Masive analizes",  
+	# -statusmsg	=> "Runs all  the features at once.",
+	# );	
+# my $bl_bttn_massave	= $fr_buttons	-> Balloon( -statusbar => $instruction_area );
+# $bl_bttn_massave	-> attach( $bttn_massave,
+	# -balloonmsg	=> "Save all",  
+	# -statusmsg	=> "Saves all results after the masive analizes.",
+	# );	
 my $bl_bttn_reset	= $fr_buttons	-> Balloon( -statusbar => $instruction_area );
 $bl_bttn_reset	-> attach( $bttn_reset,
 	-balloonmsg	=> "Reset",  
 	-statusmsg	=> "Clears all user`s actions and setts the program at start position.", 
 	);
+
 my $bl_bttn_src_rlc	= $fr_results	-> Balloon( -statusbar => $instruction_area );
 $bl_bttn_src_rlc	-> attach( $bttn_reset,
 	-balloonmsg	=> "",  
@@ -426,6 +408,7 @@ $bl_bttn_saceC	-> attach( $bttn_reset,
 	-balloonmsg	=> "",  
 	-statusmsg	=> "",
 	);
+
 my $bl_bttn_show_h	= $fr_histopt	-> Balloon( -statusbar => $instruction_area );
 $bl_bttn_show_h	-> attach( $bttn_show_h,
 	-balloonmsg	=> "",  
@@ -441,6 +424,7 @@ $bl_buttn_save_allh	-> attach( $buttn_save_allh,
 	-balloonmsg	=> "",  
 	-statusmsg	=> "",
 	);
+
 my $bl_bttn_src_ref	= $fr_outertxt	-> Balloon( -statusbar => $instruction_area );
 $bl_bttn_src_ref	-> attach( $bttn_src_ref,
 	-balloonmsg	=> "",  
@@ -456,48 +440,40 @@ $bl_bttn_match_all	-> attach( $bttn_match_all,
 	-balloonmsg	=> "",  
 	-statusmsg	=> "",
 	);
-my $bl_bttn_saveM	= $fr_outertxt	-> Balloon( -statusbar => $instruction_area );
-$bl_bttn_saveM		-> attach( $bttn_saveM,
-	-balloonmsg	=> "",  
-	-statusmsg	=> "",
-	);
 } #	==========	==========	==========	==========	==========	</MOUSEOVER>
+
 { #	==========	==========	==========	==========	==========	<GEOMETRY>
 $fr_len_distribution	-> grid( -row => 1, -column => 1 );
 	$fr_status	-> grid( -row => 1, -column => 1 ); 
 		$txt_status	-> grid( -row => 1, -column => 1 );
-		$instruction_area	-> grid( -row => 2, -column => 1 ); 
-	$fr_control	-> grid( -row => 2, -column => 1 );
-		$fr_buttons	-> grid( -row => 1, -column => 1 ); 
-			$bttn_open	-> grid( -row => 1, -column => 2 );
-			$bttn_count	-> grid( -row => 2, -column => 2 );
-			$bttn_hmode	-> grid( -row => 3, -column => 2 );
-			$bttn_mmode	-> grid( -row => 4, -column => 2 );
-			$bttn_masrun	-> grid( -row => 5, -column => 2 );
-			$bttn_massave	-> grid( -row => 6, -column => 2 );
-			$bttn_reset	-> grid( -row => 7, -column => 2 );
-		$fr_options	-> grid ( -row => 1, -column => 2 );
-			$fr_radiobttns	-> grid ( -row => 1, -column => 1 ); 
-				$lbl_radiobttns	-> grid( -row => 1, -column => 1 ); 
-				$rbttn_nontab	-> grid( -row => 1, -column => 2 );
-				$rbbtn_tab	-> grid( -row => 1, -column => 3 );
-				$lbl_dataset	-> grid( -row => 3, -column => 1 );
-				$rbttn_red	-> grid( -row => 3, -column => 2 );
-				$rbttn_nonred	-> grid( -row => 3, -column => 3 );
-			$fr_scale	-> grid( -row => 2, -column => 1 );
-				$scale_down	-> grid( -row => 1, -column => 1 );
-				$scale_label	-> grid( -row => 1, -column => 2 );
-				$scale_up	-> grid( -row => 1, -column => 3 );
-			$fr_results	-> grid( -row => 3, -column => 1 );
-				$txt_results	-> pack( -side => 'bottom' );
-				$be_rlc		-> pack( -side => 'left' );
-				$bttn_src_rlc	-> pack( -side => 'left' );
-				$bttn_saveC	-> pack( -side => 'left' );
+	$fr_buttons	-> grid( -row => 2, -column => 1 ); 
+			$bttn_open	-> grid( -row => 1, -column => 1 );
+			$bttn_count	-> grid( -row => 1, -column => 2 );
+			$bttn_hmode	-> grid( -row => 1, -column => 3 );
+			$bttn_mmode	-> grid( -row => 1, -column => 4 );
+			$bttn_reset	-> grid( -row => 1, -column => 5 );
+	$fr_options	-> grid ( -row => 3, -column => 1 );
+		$fr_radiobttns	-> grid ( -row => 1, -column => 1 ); 
+			$lbl_radiobttns	-> grid( -row => 1, -column => 1 ); 
+			$rbttn_nontab	-> grid( -row => 1, -column => 2 );
+			$rbbtn_tab	-> grid( -row => 1, -column => 3 );
+			$lbl_dataset	-> grid( -row => 3, -column => 1 );
+			$rbttn_red	-> grid( -row => 3, -column => 2 );
+			$rbttn_nonred	-> grid( -row => 3, -column => 3 );
+		$fr_scale	-> grid( -row => 2, -column => 1 );
+			$scale_down	-> grid( -row => 1, -column => 1 );
+			$scale_label	-> grid( -row => 1, -column => 2 );
+			$scale_up	-> grid( -row => 1, -column => 3 );
+		$fr_results	-> grid( -row => 3, -column => 1 );
+			$txt_results	-> pack( -side => 'bottom' );
+			$be_rlc		-> pack( -side => 'left' );
+			$bttn_src_rlc	-> pack( -side => 'left' );
+			$bttn_saveC	-> pack( -side => 'left' );
 $fr_progress 	-> grid( -row => 1, -column => 2 );
 	$progress_rlc	-> grid( -row => 1, -column => 1 );
 $fr_histbox	-> grid( -row => 1, -column => 3 );  
 	$listbox	-> grid( -row => 1, -column => 1 );
-	$lbl_histbox	-> grid( -row => 2, -column => 1 );
+	$instruction_area	-> grid( -row => 2, -column => 1 );
 	$fr_histopt	-> grid( -row => 3, -column => 1 );
 		$bttn_show_h	-> grid( -row => 1, -column => 1 );  
 		$bttn_save_oneh	-> grid( -row => 1, -column => 2 );  
@@ -523,9 +499,8 @@ $fr_refere	-> grid( -row => 1, -column => 5 );
 		$bttn_src_ref	-> pack( -side => 'left' );
 		$bttn_match_one	-> pack( -side => 'left' );
 		$bttn_match_all	-> pack( -side => 'left' );
-		$bttn_saveM	-> pack( -side => 'left' );
-		$bttn_saveMA	-> pack( -side => 'left' );
 } #	==========	==========	==========	==========	==========	</GEOMETRY>
+
 { #	==========	==========	==========	==========	==========	<CONTROLS>
 $mw -> bind( '<Control-o>', [ \&B_OPEN_DIR	] );
 $mw -> bind( '<Control-c>', [ \&B_COUNT_MIRNA	] );
@@ -536,7 +511,9 @@ $mw -> bind( '<Control-s>', [ \&B_MAS_SAVE	] );
 $mw -> bind( '<Control-r>', [ \&B_RESET_ALL	] );
 $mw -> bind( 'all' => '<Key-Escape>' => sub { exit; } );
 } #	==========	==========	==========	==========	==========	</CONTROLS>
+
 MainLoop ();	#	==========	==========	==========	==========	</GUI>
+
 sub	B_OPEN_DIR # ===============================
 # Sets a working directory and gives a description
 # of the content. Sorts fasta from non-fasta files.
@@ -605,8 +582,8 @@ sub	B_OPEN_DIR # ===============================
 	{
 		$listbox -> insert( 'end', $fasta_array[ $l ] );
 	}
-	return();
 }
+
 sub	B_COUNT_MIRNA # ============================
 # Counts all miRNA from (non)redundant data in
 # (non)tabulated format with same length 
@@ -621,7 +598,9 @@ sub	B_COUNT_MIRNA # ============================
 	# 1.  Check for missing working directory and (un)lock widgets;
 	if( $workspace eq q{} )
 	{
-		_widget_deactivator( $bttn_hmode, $bttn_masrun, $bttn_save_oneh, );
+		_widget_deactivator( $bttn_hmode, 
+		######################################################$bttn_masrun, 
+		$bttn_save_oneh, );
 		
 		$txt_results	-> delete( '0.0', 'end' );
 		$txt_status	-> delete( '0.0', 'end' );
@@ -637,7 +616,8 @@ sub	B_COUNT_MIRNA # ============================
 	my $bar_of_progress = 100 / $#files_array;
 	
 	# 2. Counts the length distribution.	
-	$txt_results	-> insert( 'end',"THE RESULTS FROM ANALYSES\nOF LENGHT DISTRIBUTION\nFOR THE UPLOADED SAMPLES ARE:\n" );
+	$txt_results	-> insert( 'end',"THE RESULTS FROM ANALYSES\n"
+		."OF LENGHT DISTRIBUTION\nFOR THE UPLOADED SAMPLES ARE:\n" );
 	for ( my $j = 0; $j <= $#files_array; $j++ )
 	{	
 		my ( $eq_seq_copies, $total_copies, $seq_len, ) = ( 0, 0, 0, );
@@ -646,6 +626,7 @@ sub	B_COUNT_MIRNA # ============================
 		
 		# 2.1 Sums the copies of all miRNA with same length.
 		$txt_results -> insert( 'end', "\n$files_array[ $j ]\n" );
+		push( @res_rlc, "\n$files_array[ $j ]\n" );
 		open( FILE_ANALYZER, "$dir/$files_array[ $j ]" );
 		while( <FILE_ANALYZER> )
 		{ 
@@ -712,10 +693,11 @@ sub	B_COUNT_MIRNA # ============================
 				
 				$total_copies_percent 
 					= sprintf( "%.2f", ( $seq_len_hash{ $key } / $total_copies ) * 100 );
-				$rlc_tbl -> add( $key, $seq_len_hash{ $key }, $total_copies_percent . "%\n" )
+				$rlc_tbl -> add( $key, $seq_len_hash{ $key }, $total_copies_percent . "%\n" );
 			}
 		}		
-		$rlc_tbl	-> add( "total_copies", $total_copies, "100%" );		
+		$rlc_tbl	-> add( "total_copies", $total_copies, "100%" );
+		push( @res_rlc, $rlc_tbl );
 		$txt_results	-> insert( 'end', $rlc_tbl );
 		
 		# 2.4 Load data for histogram.
@@ -724,10 +706,11 @@ sub	B_COUNT_MIRNA # ============================
 		# 2.5 ProgressBar update.
 		$progress_lvl	+= $bar_of_progress ;
 		print chr ( 7 ) if ( $progress_lvl >= 100 );
-		$fr_len_distribution -> update;
+		# $fr_len_distribution -> update;
 	}
-	return();
+	# $results_rlc = ( $txt_results );
 }
+
 sub	B_HIST_MODE # ==============================
 # Allows to draw and save histograms.
 # ==================================================
@@ -741,8 +724,8 @@ sub	B_HIST_MODE # ==============================
 		."You can save the histogram by double-click on the"
 		."listbox element or by using \none of the save buttons."
 		);
-	return();
 }
+
 sub	B_MATCH_MODE # =============================
 # Allows to compare samples with referent DB.
 # ==================================================
@@ -750,6 +733,7 @@ sub	B_MATCH_MODE # =============================
 	_widget_activator( $bttn_src_ref,$bttn_match_one, $bttn_match_all 
 		, $cb1, $cb2, $cb3, $cb4, $rbbt_ref_tab, $rbbt_ref_nontab 
 		);
+
 	my @types = ( 
 		[ "Log files", [ qw/.txt .fa .fas .fasta/ ] ],
 		[ "All files",	'*' ],
@@ -759,20 +743,22 @@ sub	B_MATCH_MODE # =============================
 	$txt_status -> delete( '0.0', 'end' );
 	$txt_status -> insert( 'end', "The reference database is:\n$filepath\n" );
 	$referent_DB = $filepath;
-	return();
 }
+
 sub	B_MAS_RUN # ================================
 # 
 # ==================================================
 {
-	return();
+
 }
+
 sub	B_MAS_SAVE # ===============================
 #
 # ==================================================
 {
-	return();
+
 }
+
 sub	B_RESET_ALL # ==============================
 #
 # ==================================================
@@ -788,13 +774,15 @@ sub	B_RESET_ALL # ==============================
 	$progress_lvl = 0;				
 	
 	_widget_deactivator(
-		$bttn_count,$bttn_hmode, $bttn_mmode,$bttn_masrun
-		, $bttn_massave, $rbttn_nontab, $rbbtn_tab, $rbttn_red
+		$bttn_count,$bttn_hmode, $bttn_mmode,####################$bttn_masrun
+		############################################, $bttn_massave,
+		 $rbttn_nontab, $rbbtn_tab, $rbttn_red
 		, $rbttn_nonred, $scale_down, $scale_up, $bttn_src_rlc
 		, $bttn_saveC, $bttn_show_h, $bttn_save_oneh, $buttn_save_allh
 		, $rbbt_ref_nontab, $rbbt_ref_tab, $cb1, $cb2, $cb3, $cb4, $bttn_src_ref
-		, $bttn_match_one, $bttn_match_all, $bttn_saveM, $bttn_saveMA,
+		, $bttn_match_one, $bttn_match_all,
 		);
+
 	$fr_histbox -> Label( -width => 58, -height => 27, )-> grid( -row => 4, -column => 1 );
 	
 	$listbox	-> delete( 0, 'end' );
@@ -805,8 +793,8 @@ sub	B_RESET_ALL # ==============================
 		. "The program is ready for the next task.\n" );
 	
 	$mw	->update();
-	return();
 }
+
 sub	H_show_hist # ==============================
 # 
 # ==================================================
@@ -821,6 +809,7 @@ sub	H_show_hist # ==============================
 		);
 	$histogram -> Label( -image => $png ) -> grid ( -row => 1, -column => 1 );
 }
+
 sub	H_save_oneh # ==============================
 # 
 # ==================================================
@@ -837,13 +826,14 @@ sub	H_save_oneh # ==============================
 	my $png = _hist( 
 		$listbox -> get( $listbox -> curselection )
 		, %hist_data 
-	) ->png;
+	) -> png;
 	
 	open( my $out, '>', $filepath );
 	binmode $out;
 	print $out $png;
 	close $out;
 }
+
 sub	H_save_allh # ==============================
 # 
 # ==================================================
@@ -869,7 +859,8 @@ sub	H_save_allh # ==============================
 		close $out;
 	}
 }
-sub	_hist # ==============================
+
+sub	_hist # ====================================
 # 
 # ==================================================
 {	
@@ -908,69 +899,218 @@ sub	_hist # ==============================
 		}
 	}
 }
+
 sub	M_match_one # ==============================
 # 
 # ==================================================
  {
 	$txt_compare -> delete( '0.0', 'end' );
-	my $fasta=$listbox -> get( $listbox -> curselection );
-	_match( $fasta );
-	return();
- }
+	
+	my @toSave = ();
+	@toSave = _match( $listbox -> get( $listbox -> curselection ) );
+	my $answer = $mw -> Dialog(
+		-title		=> 'Please Reply', 
+		-text		=> "Would you like to save the results ?", 
+		-default_button	=> 'Yes',
+		-buttons	=> [ 'Yes', 'No'], 
+		-bitmap		=> 'question' 
+		) -> Show(),;
+	if( $answer eq 'Yes' )
+	{
+		my $sample = $listbox -> get( $listbox -> curselection );
+		$sample =~ s/.fa//;
+		$sample = "$sample-refDB.csv";
+		
+		SAVE( $sample, @toSave );
+	}
+	elsif( $answer eq 'No' )	{ return(); }
+	elsif( !defined $answer )	{ return(); }
+}
  
 sub	M_match_all # ==============================
 #
 # ==================================================
  {
- 	_widget_activator( $bttn_saveMA );
- 	$txt_compare -> delete( '0.0', 'end' );
- 	my @elements = $listbox -> get( 0, 'end' );
- 	for( my $i= 0; $i <= $#elements; $i++ )
-	{
-		_match( $elements[ $i ] );
-	}
-	return();
-}
-sub	M_save_match_one # =========================
-# 
-# ==================================================
-{
-	return();
-}
-sub	M_save_match_all # =========================
-# 
-# ==================================================
-{
-	return();
-}
-sub	save_rlc # =================================
-# 
-# ==================================================
-{
-	# my $toPrint= $_[ 0 ];
+	$txt_compare -> delete( '0.0', 'end' );
+	my @elements = $listbox -> get( 0, 'end' );
 	
-	my $types = [ 
-		[ '.csv', '.txt' ],
-		[ 'All Files', '*' ],
-	];
-	my $save = $mw -> getSaveFile(-filetypes => $types, 
-                             -initialfile => 'test',
-                             -defaultextension => '.txt');
-	my$filename = 'save.txt';
-	open	( FH, "+>$filename" );
-	while	( <FH> )
+	my $answer = $mw -> Dialog(
+		-title		=> 'Please Reply', 
+		-text		=> "Would you like to save the results ?", 
+		-default_button	=> 'Yes',
+		-buttons	=> [ 'Yes', 'No'], 
+		-bitmap		=> 'question' 
+		) -> Show(),;
+	if( $answer eq 'Yes' )
 	{
-		binmode $txt_results;
-		print "$txt_results\n";
+		my $save_dir = $mw -> chooseDirectory();
+		
+		for( my $i= 0; $i <= $#elements; $i++ )
+		{
+			my $sample = $elements[ $i ];
+			$sample =~ s/.fa//;
+			$sample = "$sample-refDB.csv";
+			
+			my @ss = _match( $elements[ $i ] );
+			open( my $out, '>', "$save_dir/$sample" );
+			print $out @ss;
+			close $out;
+		}		
 	}
-	close FH;
-	# return $toPrint;
+	elsif( $answer eq 'No' )
+	{ 
+		for( my $i= 0; $i <= $#elements; $i++ )
+		{
+			_match( $elements[ $i ] );
+		}
+	}
+	elsif( !defined $answer )	{ return(); }
 }
+
+
+# sub	M_save_match_all # =========================
+# # 
+# # ==================================================
+# {
+	# my @r = split "\n\n", @res_ref;
+	
+	# print $res_ref[0]."--0\n";
+	# print $res_ref[1]."--1\n";
+	# print $res_ref[2]."--2\n";
+	
+# }
+
+sub	_match # ===================================
+# 
+# ==================================================
+{
+	_widget_activator( $bttn_src_ref );
+	
+	my ( %ref_db, %sampleHash, ) = ( (), () ); 
+	my ( $refID, $refS, $sampleID, $sampleS, ) = ( q{}, q{}, q{}, q{}, );
+	my ( @matches,@res_ref ) = ( (), () );
+	open( REF_DB, '<', $referent_DB );
+	while( <REF_DB> )
+	{	
+		chomp;	
+		if( $matF eq 1 )
+		{		
+			if( $_ =~ /^>(.+)/ )
+			{
+				$refID = $_;
+			}
+			else
+			{
+				$ref_db{ $_ } = $refID;
+			}
+			
+		}
+		elsif( $matT eq 1 )
+		{
+			my @rowcols = split ( "\t", $_ );
+			$ref_db{ $rowcols[ 1 ] } = $rowcols[ 0 ];
+		}
+		else
+		{
+			_widget_deactivator( $bttn_src_ref );
+			$txt_status -> delete( '0.0', 'end' );
+			$txt_status -> insert( 'end', "WARNING ! ! ! \n\n"
+				. "Missing tabulation format\nfor the referent DB\n"
+				."Pleace, choose a tabulation format.\n"
+				);
+		}
+	}
+	close REF_DB;
+	
+	open( SAMPLE, '<', "$workspace/@_" );
+	while( <SAMPLE> )
+	{
+		chomp;
+		if( $tabF eq 1 )
+		{
+			if( $_ =~ /^>(.+)/ )
+			{ 
+				$sampleID = $_;
+			}
+			else
+			{ 
+				$sampleS = $_;		      
+				$sampleS =~tr/T/U/;
+				$sampleHash{ $sampleS} = $sampleID;
+			}
+		}
+		elsif( $tabT eq 1 )
+		{
+			my @rowcols = split ( "\t", $_ );
+			$rowcols[ 1 ] =~tr/T/U/;
+			$sampleHash{ $rowcols[ 1 ] } = $rowcols[ 0 ];	
+		}
+	}
+	close SAMPLE;
+	
+	foreach( keys %sampleHash ) 
+	{
+		push( @matches, $_ ) if exists $ref_db{ $_ };
+	}
+	
+	$txt_compare -> insert( 'end', "[ @_ ] is compared to referent DB\n[ $referent_DB ]\n\n" );
+	push( @res_ref, "[ @_ ] - [ $referent_DB ]\n" );
+	for( my $k = 0; $k <= $#matches; $k++ )
+	{	
+		my $matched_seq_len = length( $matches[ $k ] );	
+		if( $var1 eq 1 )
+		{	
+			$txt_compare -> insert( 'end', "$ref_db{ $matches[ $k ] }\t" );
+			push( @res_ref, "$ref_db{ $matches[ $k ] },");
+		}
+		if( $var2 eq 1 )
+		{
+			$txt_compare -> insert( 'end', "$sampleHash{ $matches[ $k ] }\t" );
+			push( @res_ref, "$sampleHash{ $matches[ $k ] }," );
+		}
+		if( $var3 eq 1 )
+		{
+			$txt_compare -> insert( 'end', "$matches[ $k ]\t" );
+			push( @res_ref, "$matches[ $k ]," );
+		}
+		if( $var4 eq 1 )
+		{
+			$txt_compare -> insert( 'end', "$matched_seq_len" );
+			push( @res_ref, "$matched_seq_len," );
+		}
+		$txt_compare -> insert( 'end', "\n" );		
+		push( @res_ref, "\n" );
+	}
+	push( @res_ref, "\n" );
+	return( @res_ref );
+}
+
+sub	SAVE # =====================================
+# 
+# ==================================================
+{
+	my ( $file_name, @toPrint, ) = @_;
+	
+	my @type = (
+		[ "Log files", [ qw/.txt .csv/ ] ],
+		[ "All files", '*'],
+	);
+	my $file_path = $mw -> getSaveFile(
+		-filetypes	=> \@type,
+		-initialfile	=> $file_name,
+                ) or return();
+	
+	open( my $fh, '>', $file_path );
+	print $fh @toPrint;
+	close $fh;
+}
+
 sub	menu_bar_items # ===========================
 # The MENU of the program.
 # ==================================================
 {
 	[ map [ 'cascade', $_ -> [ 0 ], -menuitems => $_ -> [ 1 ] ],
+
 	[ '~File',
 		[
 			[ qw/command Open -command/	=> \&open_dir		],	$line,
@@ -1046,121 +1186,31 @@ sub	menu_bar_items # ===========================
 	],
 ];
 }
-sub	_match # ===================================
-# 
-# ==================================================
-{
-	_widget_activator( $bttn_src_ref, $bttn_saveM, );
-	
-	my ( %ref_db, %sampleHash, ) = ( (), () ); 
-	my ( $refID, $refS, $sampleID, $sampleS, ) = ( q{}, q{}, q{}, q{}, );
-	my @matches = ();
-	
-	open( REF_DB, '<', $referent_DB );
-	while( <REF_DB> )
-	{	
-		chomp;	
-		if( $matF eq 1 )
-		{		
-			if( $_ =~ /^>(.+)/ )
-			{
-				$refID = $_;
-			}
-			else
-			{
-				$ref_db{ $_ } = $refID;
-			}
-			
-		}
-		elsif( $matT eq 1 )
-		{
-			my @rowcols = split ( "\t", $_ );
-			$ref_db{ $rowcols[ 1 ] } = $rowcols[ 0 ];
-		}
-		else
-		{
-			_widget_deactivator( $bttn_src_ref, $bttn_saveM, $bttn_saveMA );
-			$txt_status -> delete( '0.0', 'end' );
-			$txt_status -> insert( 'end', "WARNING ! ! ! \n\n"
-				. "Missing tabulation format\nfor the referent DB\n"
-				."Pleace, choose a tabulation format.\n"
-				);
-		}
-	}
-	close REF_DB;
-	
-	open( SAMPLE, '<', "$workspace/@_" );
-	while( <SAMPLE> )
-	{
-		chomp;
-		if( $tabF eq 1 )
-		{
-			if( $_ =~ /^>(.+)/ )
-			{ 
-				$sampleID = $_;
-			}
-			else
-			{ 
-				$sampleS = $_;
-		      
-			$sampleS =~tr/T/U/;
-			$sampleHash{ $sampleS} = $sampleID;
-			}
-		}
-		elsif( $tabT eq 1 )
-		{
-			my @rowcols = split ( "\t", $_ );
-			$rowcols[ 1 ] =~tr/T/U/;
-			$sampleHash{ $rowcols[ 1 ] } = $rowcols[ 0 ];	
-		}
-	}
-	close SAMPLE;
-	
-	foreach( keys %sampleHash ) 
-	{
-		push( @matches, $_ ) if exists $ref_db{ $_ };
-	}
-	
-	my $tbl_match = Text::Table -> new();
-	$txt_compare -> insert( 'end', "[ @_ ] is compared to referent DB\n[$referent_DB]\n\n" );
-	for( my $k = 0; $k <= $#matches; $k++ )
-	{		
-		my $matched_seq_len = length( $matches[ $k ] );
-		$txt_compare -> insert( 'end', "$ref_db{ $matches[ $k ] }\t" )		if $var1 eq 1;
-		$txt_compare -> insert( 'end', "$sampleHash{ $matches[ $k ] }\t" )	if $var2 eq 1;
-		$txt_compare -> insert( 'end', "$matches[ $k ]\t" )			if $var3 eq 1;
-		$txt_compare -> insert( 'end', "$matched_seq_len" )			if $var4 eq 1;
-		$txt_compare -> insert( 'end', "\n" );		
-	}
-	return();		
-}
+
 sub	search # ===================================
 # 
 # ==================================================
-{  
+{
 	my ( $search_string, $be_widjet, $txt_widjet ) = @_;
-	
-	my %searches = ();
-	my $startindex = 'insert';
-	my $index = $txt_widjet -> search( '-nocase', $search_string, $startindex );
-	
+	my %searches =();
 	# Add search string to list if it's not already there
-	if( !exists $searches{ $search_string } ) 
+	if(! exists $searches{ $search_string } ) 
 	{
 		$be_widjet -> insert( 'end', $search_string );
 	}
 	$searches{ $search_string }++;
   
 	# Calculate where to search from, and what to highlight next  
-	
+	my $startindex = 'insert';
 	if( defined $txt_widjet -> tagRanges( 'curSel' ) ) 
 	{ 
 		$startindex = 'curSel.first + 1 chars'; 
 	}    
+	my $index = $txt_widjet -> search( '-nocase', $search_string, $startindex );
 	if( $index ne '' ) 
 	{
-		my $endindex = "$index + " . ( length $search_string ) . " chars";
 		$txt_widjet -> tagRemove( 'curSel', '1.0', 'end' );
+		my $endindex = "$index + " . ( length $search_string ) . " chars";
 		$txt_widjet -> tagAdd( 'curSel', $index, $endindex );
 		$txt_widjet -> see( $index );
 	} 
@@ -1169,13 +1219,14 @@ sub	search # ===================================
 		$mw -> bell; 
 	}
 	$be_widjet -> selectionRange( 0, 'end' ); # Select word we just typed/selected
-	return();
 }
+
 sub	window # ===================================
 # Opens a window with label of single .txt file on it.
 # ==================================================
 {
 	my ( $ttl, $txt ) = @_;
+
 	my $win	= new MainWindow( -title => $ttl );
 	my $frm	= $win -> Frame() -> pack();
 	my $lbl	= q{};
@@ -1187,8 +1238,8 @@ sub	window # ===================================
 		$lbl = $frm -> Label( -text => $_ ) -> pack();
 	}
 	close IN;
-	return();
 }
+
 sub	pdf_handler # ==============================
 # 
 # ==================================================
@@ -1196,8 +1247,8 @@ sub	pdf_handler # ==============================
 	my $pdf_w =  new MainWindow;
 	$pdf_w -> title( "PDF" );	
 	MainLoop();
-	return();
 }
+
 sub	_widget_activator # ========================
 # Unlocks an arrey of widgets for further usage.
 # ==================================================
@@ -1207,8 +1258,8 @@ sub	_widget_activator # ========================
 	{
 		$widgets[ $i ] -> configure( -state => 'active' );
 	}
-	return();
 }
+
 sub	_widget_deactivator # ======================
 # Locks an arrey of widgets for further usage.
 # ==================================================
@@ -1218,5 +1269,4 @@ sub	_widget_deactivator # ======================
 	{
 		$widgets[ $i ] -> configure( -state => 'disabled' );
 	}
-	return();	
 }
