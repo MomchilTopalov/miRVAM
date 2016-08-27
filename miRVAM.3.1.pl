@@ -35,7 +35,7 @@ use MIME::Base64;
 use GD::Graph;
 use GD::Graph::bars;
 
-#	==========	==========	==========	==========	==========	<GLOBAL VARIABLES>
+#	==========	==========	==========	==========	<GLOBAL VARIABLES>
 my $time = localtime ();					# FOR WELCOMING MESSAGE
 my ( @dir_content, @fasta_array ) = ( (), () );			# FILE VERIFICATION
 my ( $workspace, $referent_DB ) = ( q{}, q{} );			# FILEHANDLER VARIABLES
@@ -48,7 +48,7 @@ my ( $scale_from, $scale_to,) = ( 15, 30, );			# INTERVAL
 my ( $search_incounter, $search_inmatch ) = ( q{}, q{} );	# SEARCH
 my ( %hist_data, @hist_y ) = ( (), () );			# HISTOGRAM ATRIBUTES
 my @res_rlc = ();						# &SAVE VARIABLES
-my $progress_lvl = 0;						# PROGRESSBAR VARIABLES
+my ( $progress_c, $progress_m ) = ( 0, 0, );			# PROGRESSBAR VARIABLES
 my @colors = ( 
 	 0, '#ff002a',  1, '#ff0014',  2, '#ff000a',  3, '#ff0500',  4, '#ff1000',
 	 5, '#ff1b00',  6, '#ff3000',  7, '#ff3b00',  8, '#ff4600',  9, '#ff5100',
@@ -72,128 +72,154 @@ my @colors = (
 	95, '#f400ff', 96, '#ff00f3', 97, '#ff00e3', 98, '#ff00d9', 99, '#ff00ce', 
 	);
 my @types_img = (
-		[ "Log files", [ qw/.png .jpg/]  ],
+		[ "Log files", [ qw/.png .jpg/] ],
 		[ "All files", '*'],
 	);	
 Readonly my $line	=> q{"};				# MENU_SEPARATOR
 Readonly my $sp		=> q/ /;				# SPACE
-#	==========	==========	==========	==========	==========	</GLOBAL VARIABLES>
+#	==========	==========	==========	==========	</GLOBAL VARIABLES>
 
-#	==========	==========	==========	==========	==========	<GUI>
-my $mw = new MainWindow( -background => 'red');
+#	==========	==========	==========	==========	<GUI>
+my $mw = new MainWindow();
 $mw -> title( "miRVAM" );
 $mw -> configure( 
-	-menu => my $menu_bar =	$mw -> Menu( 
-		-menuitems => menu_bar_items )
+	-menu => my $menu_bar =	$mw -> Menu(-menuitems => menu_bar_items ) 
 	);
 
 my $fr_len_distribution	= $mw	-> Frame(); 
 
 my $fr_status	= $fr_len_distribution	-> Frame(); 
 my $txt_status	= $fr_status	-> Scrolled( 
-	"Text", -borderwidth	=> 1,
-	-width		=> 37,	-height		=> 7,	
-	-padx		=> 15, 	-pady		=> 5,	
-	-scrollbars	=> "e",	-background	=> 'grey90',
+	'Text', 
+	-borderwidth	=>  1,
+	-width		=> 37,	
+	-height		=>  7,	
+	-padx		=> 15, 	
+	-pady		=>  5,	
+	-scrollbars	=> "e",	
+	-background	=> 'grey90',
 	);
 $txt_status	-> insert('end', "Welcome to miRVAM.\n"
 	. "$time\nis an excellent time to do science!\n\n"
 	. "Pleace,choose the directory with your\nFASTA files.\n" 
 	);
 	
-my $fr_buttons	= $fr_len_distribution	-> Frame(); 		
+my $fr_buttons	= $fr_len_distribution	-> Frame();	
 my $bttn_open	= $fr_buttons	-> Button(
-	-image	=> $fr_buttons	-> Photo( -file => 'open.jpg' ),
+	-image		=> $fr_buttons	-> Photo( -file => 'open.jpg' ),
 	-activebackground => 'yellow',	
 	-command	=> \&B_OPEN_DIR,
 	);
 my $bttn_count	= $fr_buttons	-> Button(
-	-image	=> $fr_buttons	-> Photo( -file => 'count.jpg' ),
-	-activebackground => 'yellow',	-state	=> $state,
-	-command	=> sub { &B_COUNT_MIRNA( @fasta_array ) }, 
+	-image		=> $fr_buttons	-> Photo( -file => 'count.jpg' ),
+	-activebackground => 'yellow',	
+	-state		=> $state,
+	-command	=> sub{ &B_COUNT_MIRNA( @fasta_array ) }, 
 	);
 my $bttn_hmode	= $fr_buttons	-> Button(
-	-image	=> $fr_buttons	-> Photo( -file => 'hist.jpg' ),
-	-activebackground => 'yellow',	-state	=> $state,
+	-image		=> $fr_buttons	-> Photo( -file => 'hist.jpg' ),
+	-activebackground => 'yellow',
+	-state		=> $state,
 	-command	=> \&B_HIST_MODE,
 	);
 my $bttn_mmode	= $fr_buttons	-> Button(
-	-image	=> $fr_buttons	-> Photo( -file => 'match.jpg' ),
-	-activebackground => 'yellow',	-state	=> $state,
+	-image		=> $fr_buttons	-> Photo( -file => 'match.jpg' ),
+	-activebackground => 'yellow',	
+	-state		=> $state,
 	-command	=> \&B_MATCH_MODE, 
 	);
 my $bttn_reset	= $fr_buttons	-> Button(
-	-image	=> $fr_buttons	-> Photo( -file => 'reset.jpg' ),
+	-image		=> $fr_buttons	-> Photo( -file => 'reset.jpg' ),
 	-activebackground => 'yellow',
 	-command	=> \&B_RESET_ALL, 
 	);
 	
 my $fr_options	= $fr_len_distribution	-> Frame( 
-	-borderwidth	=> 1,	-relief		=> 'groove' , 
+	-borderwidth	=> 1,	
+	-relief		=> 'groove' , 
 	);
 	
 my $fr_radiobttns	= $fr_options	-> Frame(); 
 my $lbl_radiobttns	= $fr_radiobttns	-> Label(
-	-text	=> "Format$sp:",
-	-font	=> '-*-Calibri-R-Normal-*-*-15' , 
+	-text		=> "Format$sp:",
+	-font		=> '-*-Calibri-R-Normal-*-*-15' , 
 	); 
 my $rbttn_nontab	= $fr_radiobttns	-> Radiobutton(
-	-text	=> "Non-tabulated$sp|",
-	-font	=> '-*-Calibri-R-Normal-*-*-12' ,
-	-value	=> 1,		-variable	=> \$isT,
-	-state	=> $state,	-command	=> sub { ( $tabT, $tabF, ) = ( 0, 1, ) },
+	-text		=> "Non-tabulated$sp|",
+	-font		=> '-*-Calibri-R-Normal-*-*-12' ,
+	-value		=> 1,		
+	-variable	=> \$isT,
+	-state		=> $state,	
+	-command	=> sub { ( $tabT, $tabF, ) = ( 0, 1, ) },
 	);
 my $rbbtn_tab	= $fr_radiobttns	-> Radiobutton(
-	-text	=> "Tabulated$sp$sp$sp$sp$sp$sp$sp$sp$sp$sp|",
-	-font	=> '-*-Calibri-R-Normal-*-*-12' ,
-	-value	=> 2,		-variable	=> \$isT,
-	-state	=> $state,	-command 	=> sub { ( $tabT, $tabF, ) = ( 1, 0, ) },
+	-text		=> "Tabulated$sp$sp$sp$sp$sp$sp$sp$sp$sp$sp|",
+	-font		=> '-*-Calibri-R-Normal-*-*-12' ,
+	-value		=> 2,		
+	-variable	=> \$isT,
+	-state		=> $state,	
+	-command 	=> sub { ( $tabT, $tabF, ) = ( 1, 0, ) },
 	);
 my $lbl_dataset	= $fr_radiobttns -> Label(
-	-text	=> "Dataset:",
-	-font	=> '-*-Calibri-R-Normal-*-*-15' , 
+	-text		=> "Dataset:",
+	-font		=> '-*-Calibri-R-Normal-*-*-15' , 
 	);
 my $rbttn_red	= $fr_radiobttns -> Radiobutton(
-	-text	=> "Redundant$sp$sp$sp$sp$sp$sp$sp|",
-	-font	=> '-*-Calibri-R-Normal-*-*-12' ,
-	-value	=> 1,		-variable	=> \$isR,
-	-state	=> $state,	-command	=> sub { ( $redT, $redF, ) = ( 1, 0, ) },
+	-text		=> "Redundant$sp$sp$sp$sp$sp$sp$sp|",
+	-font		=> '-*-Calibri-R-Normal-*-*-12' ,
+	-value		=> 1,		
+	-variable	=> \$isR,
+	-state		=> $state,	
+	-command	=> sub { ( $redT, $redF, ) = ( 1, 0, ) },
 	);
 my $rbttn_nonred	= $fr_radiobttns -> Radiobutton(
-	-text	=> "Non-redundant$sp|",
-	-font	=> '-*-Calibri-R-Normal-*-*-12' ,
-	-value	=> 2,		-variable	=> \$isR,
-	-state	=> $state,	-command	=> sub	{ ( $redT, $redF, ) = ( 0, 1, ) },
+	-text		=> "Non-redundant$sp|",
+	-font		=> '-*-Calibri-R-Normal-*-*-12' ,
+	-value		=> 2,		
+	-variable	=> \$isR,
+	-state		=> $state,	
+	-command	=> sub	{ ( $redT, $redF, ) = ( 0, 1, ) },
 	);
 	
 my $fr_scale	= $fr_options	-> Frame();
 my $scale_down	= $fr_scale	-> Scale(
-	-label	=> "  Min [ 15, 20 ]",
-	-font	=> '-*-Calibri-R-Normal-*-*-15' ,
-	-activebackground => 'green',	-orient	=> 'h',
-	-length => 95,		-digit	=>  1,	
-	-from	=> 15,		-to	=> 20,
-	-state	=> $state,	-variable => \$scale_from, 
+	-label		=> "Min [ 15, 20 ]",
+	-font		=> '-*-Calibri-R-Normal-*-*-15' ,
+	-activebackground => 'green',	
+	-orient		=> 'h',
+	-length 	=> 95,
+	-digit		=>  1,	
+	-from		=> 15,	
+	-to		=> 20,
+	-state		=> $state,	
+	-variable => \$scale_from, 
 	);
 my $scale_label	= $fr_scale	-> Label(
-	-text	=> "\n\n>  Interval  >",
-	-font	=> '-*-Calibri-R-Normal-*-*-16' , 
+	-text		=> "\n\n>  Interval  >",
+	-font		=> '-*-Calibri-R-Normal-*-*-16' , 
 	);
 my $scale_up	= $fr_scale	-> Scale(
-	-label	=>"Max [ 25, 30 ]",
-	-font	=> '-*-Calibri-R-Normal-*-*-15' ,
-	-activebackground => 'green',	-orient	=> 'h',	
-	-length	=> 95,		-digit	=>  1,	
-	-from	=>  25,		-to	=> 30,	
-	-state	=> $state,	-variable => \$scale_to, 
+	-label		=>"Max [ 25, 30 ]",
+	-font		=> '-*-Calibri-R-Normal-*-*-15' ,
+	-activebackground => 'green',	
+	-orient		=> 'h',	
+	-length		=> 95,		
+	-digit		=>  1,	
+	-from		=> 25,		
+	-to		=> 30,	
+	-state		=> $state,	
+	-variable 	=> \$scale_to, 
 	);
 	
 my $fr_results	= $fr_options	-> Frame();		
 my $txt_results	= $fr_results	-> Scrolled(
-	'Text',	-scrollbars => 'e',
-	-width	=> 37,	-height => 21, 
-	-padx	=> 15,	-pady	=>  5,
-	-borderwidth	=> 1, 
+	'Text',	
+	-scrollbars => 'e',
+	-width		=> 37,	
+	-height 	=> 21, 
+	-padx		=> 15,	
+	-pady		=>  5,
+	-borderwidth	=>  1, 
 	);
 $txt_results	-> insert( 'end',"The results will be printed\nin this box.\n"
 	. "Pleace, read them before saving.\n\n"
@@ -206,132 +232,173 @@ $txt_results ->tagConfigure(
 	-foreground	=> $txt_results -> cget( -selectforeground	), 
 	);
 my $be_rlc	= $fr_results	-> BrowseEntry(
-	-width	=> 30,	-borderwidth=> 2,
+	-width		=> 30,	
+	-borderwidth	=>  2,
 	-variable	=> \$search_incounter, 
 	);
 my $bttn_src_rlc	= $fr_results	->Button(
-	-image	=> $fr_results -> Photo( -file =>'search.png' ),
-	-activebackground => 'blue', -state => $state,
-	-command => sub { search( $search_incounter, $be_rlc, $txt_results ) }, 
+	-image		=> $fr_results -> Photo( -file => 'search.png' ),
+	-activebackground => 'blue', 
+	-state 		=> $state,
+	-command 	=> sub{ 
+		search( $search_incounter, $be_rlc, $txt_results ) 
+		}, 
 	);	
 my $bttn_saveC	= $fr_results	->Button(
-	-image	=> $fr_results -> Photo( -file =>'save.png' ),
-	-activebackground => 'green',	-state	=> $state,
-	-command => sub{ &SAVE( 'length_distribution.txt', @res_rlc ) },
+	-image		=> $fr_results -> Photo( -file => 'save.png' ),
+	-activebackground => 'green',	
+	-state		=> $state,
+	-command 	=> sub{ 
+		&SAVE( 'length_distribution.txt', @res_rlc ) 
+		},
 	);
 	
 my $fr_progress	= $mw	-> Frame();
 my $progress_rlc	= $fr_progress	-> ProgressBar(
-	-borderwidth	=>  2,		-blocks	=> 100, 
-	-troughcolor	=> 'white',	-colors	=> \@colors,
-	-width		=> 15,		-length => 631,
-	-relief 	=> 'sunken',	-gap	=>   0,
-	-from		=>  0,		-to	=> 100,
-	-anchor		=> 's',		-variable => \$progress_lvl, 
+	-borderwidth	=>   2,		
+	-blocks		=> 100, 	
+	-width		=>  15,		
+	-length 	=> 631,	
+	-gap		=>   0,
+	-from		=>   0,		
+	-to		=> 100,
+	-colors		=> \@colors,
+	-troughcolor	=> 'white',
+	-relief 	=> 'sunken',
+	-anchor		=> 's',		
+	-variable => \$progress_c, 
 	);
 
 my $fr_histbox	= $mw	-> Frame();  
 my $listbox	= $fr_histbox	-> Scrolled( 
-	"Listbox",	-scrollbars	=> "e",	
-	-selectmode	=> "single",	-borderwidth	=> 1,
-	-width		=> 60,		-height		=> 8,
+	'Listbox',	
+	-scrollbars	=> "e",	
+	-selectmode	=> "single",	
+	-borderwidth	=>  1,
+	-width		=> 60,		
+	-height		=>  8,
 	-selectbackground	=> 'lightgreen',	
-	-selectborderwidth	=>  3, 
+	-selectborderwidth	=> 3, 
 	);
 my $lbl_info	= $fr_histbox	->Label(
-	-width		=> 63,	-height		=> 5,
-	-borderwidth	=>  2,	-relief 	=> 'groove', 
+	-width		=> 63,	
+	-height		=>  5,
+	-borderwidth	=>  2,	
+	-relief 	=> 'groove', 
 	); 
 	
 my $fr_histopt	= $fr_histbox	-> Frame();	
 my $bttn_show_h	= $fr_histopt	-> Button(
-	-image	=> $fr_histopt	-> Photo( -file	=> 'show_hist.png' ),
-	-activebackground => 'orange',	-state	=> $state,
+	-image		=> $fr_histopt	-> Photo( -file	=> 'show_hist.png' ),
+	-activebackground => 'orange',	
+	-state		=> $state,
 	-command	=> sub{ &H_show_hist() }, 
 	);  
 my $bttn_save_oneh	= $fr_histopt	-> Button(
-	-image	=> $fr_histopt	-> Photo( -file	=> 'save_hist.png' ),
-	-activebackground => 'yellow',	-state	=> $state,
+	-image		=> $fr_histopt	-> Photo( -file	=> 'save_hist.png' ),
+	-activebackground => 'yellow',	
+	-state		=> $state,
 	-command	=> sub{ &H_show_hist(), &H_save_oneh(), }, 
 	);  
 my $buttn_save_allh	= $fr_histopt	-> Button(
-	-image	=> $fr_histopt	-> Photo( -file => 'save_allhist.png' ),
-	-activebackground => 'green',	-state	=> $state,
+	-image		=> $fr_histopt	-> Photo( -file => 'save_allhist.png' ),
+	-activebackground => 'green',	
+	-state		=> $state,
 	-command	=>  sub{ &H_save_allh( &_hist( 
 		$listbox -> get( $listbox -> curselection )
 		,%hist_data ) ) 
 		}, 
 	);
 my $lbl_hist	= $fr_histbox -> Label(
-	-width	=> 58,	-height	=> 27, 
+	-width		=> 58,	
+	-height		=> 27, 
 	);
 	
-my $fr_progress2	= $mw	-> Frame();
-my $progress_rlc2	= $fr_progress2	-> ProgressBar(
-	-borderwidth	=>  2,		-blocks	=> 100, 
-	-troughcolor	=> 'white',	-colors	=> \@colors,
-	-width		=> 15,		-length => 631,
-	-relief 	=> 'sunken',	-gap	=>   0,
-	-from		=>  0,		-to	=> 100,
-	-anchor		=> 's',		-variable => \$progress_lvl, 
+my $fr_progress_m	= $mw	-> Frame();
+my $progress_ref	= $fr_progress_m	-> ProgressBar(
+	-borderwidth	=>   2,		
+	-blocks		=> 100, 	
+	-width		=>  15,		
+	-length 	=> 631,	
+	-gap		=>   0,
+	-from		=>   0,		
+	-to		=> 100,
+	-colors		=> \@colors,
+	-troughcolor	=> 'white',
+	-relief 	=> 'sunken',
+	-anchor		=> 's',		
+	-variable => \$progress_m, 
 	);		
 	
 my $fr_refere	= $mw	-> Frame(); 	
 
 my $fr_outer	= $fr_refere	-> Frame(
-	-borderwidth	=> 1,	-relief	=> 'sunken', 
+	-borderwidth	=> 1,	
+	-relief		=> 'sunken', 
 	); 
 
 my $fr_outer_rb	= $fr_outer	-> Frame();
 my $lbl_ref_istab	= $fr_outer_rb	-> Label(
-	-text	=> "Referent DB format:\n\n",
-	-font	=> '-*-Calibri-R-Normal-*-*-16' , 
+	-text		=> "Referent DB format:\n\n",
+	-font		=> '-*-Calibri-R-Normal-*-*-16' , 
 	);
 my $rbbt_ref_nontab	= $fr_outer_rb	 -> Radiobutton(
-	-text	=> "Non-tabulated\t|",
-	-font	=> '-*-Calibri-R-Normal-*-*-14' ,
-	-value	=> 1,		-variable	=> \$isMT,
-	-state	=> $state,	-command	=> sub { ( $matT, $matF, ) = ( 0, 1, ) },	
+	-text		=> "Non-tabulated\t|",
+	-font		=> '-*-Calibri-R-Normal-*-*-14' ,
+	-value		=> 1,		
+	-variable	=> \$isMT,
+	-state		=> $state,	
+	-command	=> sub { ( $matT, $matF, ) = ( 0, 1, ) },	
 	);
 my $rbbt_ref_tab	= $fr_outer_rb	 -> Radiobutton(
-	-text	=> "Tabulated\t|",
-	-font	=> '-*-Calibri-R-Normal-*-*-14' ,
-	-value	=> 2,		-variable	=> \$isMT,
-	-state	=> $state,	-command	=> sub { ( $matT, $matF, ) = ( 1, 0, ) },
+	-text		=> "Tabulated\t|",
+	-font		=> '-*-Calibri-R-Normal-*-*-14' ,
+	-value		=> 2,		
+	-variable	=> \$isMT,
+	-state		=> $state,	
+	-command	=> sub { ( $matT, $matF, ) = ( 1, 0, ) },
 	);
 
 my $fr_outer_cb	= $fr_outer	-> Frame();
 my $lbl_pattern	= $fr_outer_cb	-> Label(
-	-text	=>  "Output preferences:",
-	-font	=> '-*-Calibri-R-Normal-*-*-16' ,
+	-text		=>  "Output preferences:",
+	-font		=> '-*-Calibri-R-Normal-*-*-16' ,
 	);	
 my $cb1	= $fr_outer_cb -> Checkbutton(
-	-text	=> "Ref DB miRNA header\t|",
-	-font	=> '-*-Calibri-R-Normal-*-*-12' ,
-	-state	=> $state,	-variable	=>\$var1, 
+	-text		=> "Ref DB miRNA header\t|",
+	-font		=> '-*-Calibri-R-Normal-*-*-12' ,
+	-state		=> $state,	
+	-variable	=>\$var1, 
         );	
 my $cb2	= $fr_outer_cb -> Checkbutton(
-	-text	=>  "Sample miRNA header\t|",
-	-font	=> '-*-Calibri-R-Normal-*-*-12' ,
-        -state	=> $state,	-variable	=>\$var2, 
+	-text		=>  "Sample miRNA header\t|",
+	-font		=> '-*-Calibri-R-Normal-*-*-12' ,
+        -state		=> $state,	
+        -variable	=>\$var2, 
         );	
 my $cb3	= $fr_outer_cb -> Checkbutton(
-	-text	=> "Matched sequences\t|",
-	-font	=> '-*-Calibri-R-Normal-*-*-12' ,
-        -state	=> $state,	-variable	=>\$var3, 
+	-text		=> "Matched sequences\t|",
+	-font		=> '-*-Calibri-R-Normal-*-*-12' ,
+        -state		=> $state,	
+        -variable	=>\$var3, 
         );	
 my $cb4	= $fr_outer_cb -> Checkbutton(
-	-text	=> "Lenght of the sequences\t|",
-	-font	=> '-*-Calibri-R-Normal-*-*-12' ,
-        -state	=> $state,	-variable	=>\$var4, 
+	-text		=> "Lenght of the sequences\t|",
+	-font		=> '-*-Calibri-R-Normal-*-*-12' ,
+        -state		=> $state,	
+        -variable	=>\$var4, 
         );	
 
 my $fr_outertxt	= $fr_refere	-> Frame();                 
 my $txt_compare	= $fr_outertxt	-> Scrolled( 
-	"Text",	-borderwidth	=> 2,
-	-width		=> 65,	-height		=> 33, 	
-	-padx		=> 15,	-pady		=>  5,
-	-scrollbars	=> "e",	-background	=> 'grey98', 
+	'Text',	
+	-borderwidth	=>  2,
+	-width		=> 66,	
+	-height		=> 33, 	
+	-padx		=> 15,	
+	-pady		=>  5,
+	-scrollbars	=> "e",	
+	-background	=> 'grey98', 
 	);
 $txt_compare -> tagConfigure(
 	'curSel',
@@ -340,22 +407,26 @@ $txt_compare -> tagConfigure(
 	-foreground	=> $txt_compare -> cget( -selectforeground	), 
 	);
 my $be_match	= $fr_outertxt	-> BrowseEntry(
-	-width	=> 44,
+	-width		=> 48,
 	-variable	=> \$search_inmatch, 
 	);
 my $bttn_src_ref	= $fr_outertxt	-> Button(
-	-image	=> $fr_outertxt -> Photo( -file	=>'search.png' ),
-	-activebackground	=> 'blue',	-state	=> $state,
-	-command	=> sub { search( $search_inmatch, $be_match, $txt_compare ) }, 
+	-image		=> $fr_outertxt -> Photo( -file	=> 'search.png' ),
+	-activebackground	=> 'blue',	
+	-state		=> $state,
+	-command	=> sub{ 
+		search( $search_inmatch, $be_match, $txt_compare ) }, 
 	);
 my $bttn_match_one	= $fr_outertxt	-> Button(
-	-image	=> $fr_outertxt -> Photo ( -file	=>'match_one.png' ),
-	-activebackground	=> 'yellow',	-state	=> $state,
+	-image		=> $fr_outertxt -> Photo ( -file => 'match_one.png' ),
+	-activebackground	=> 'yellow',	
+	-state		=> $state,
 	-command	=> \&M_match_one,
 	);
 my $bttn_match_all	= $fr_outertxt	->Button(
-	-image	=> $fr_outertxt -> Photo( -file	=>'match_all.png' ),
-	-activebackground	=> 'orange',	-state	=> $state,
+	-image		=> $fr_outertxt -> Photo( -file	=>'match_all.png' ),
+	-activebackground	=> 'orange',	
+	-state		=> $state,
 	-command	=> \&M_match_all, 
 	);
 { #	==========	==========	==========	==========	==========	<MOUSEOVER>
@@ -439,8 +510,8 @@ $fr_len_distribution	-> grid( -row => 1, -column => 1 );
 			$bttn_hmode	-> grid( -row => 1, -column => 3 );
 			$bttn_mmode	-> grid( -row => 1, -column => 4 );
 			$bttn_reset	-> grid( -row => 1, -column => 5 );
-	$fr_options	-> grid ( -row => 3, -column => 1 );
-		$fr_radiobttns	-> grid ( -row => 1, -column => 1 ); 
+	$fr_options	-> grid( -row => 3, -column => 1 );
+		$fr_radiobttns	-> grid( -row => 1, -column => 1 ); 
 			$lbl_radiobttns	-> grid( -row => 1, -column => 1 ); 
 			$rbttn_nontab	-> grid( -row => 1, -column => 2 );
 			$rbbtn_tab	-> grid( -row => 1, -column => 3 );
@@ -465,9 +536,9 @@ $fr_histbox	-> grid( -row => 1, -column => 3 );
 		$bttn_show_h	-> grid( -row => 1, -column => 1 );  
 		$bttn_save_oneh	-> grid( -row => 1, -column => 2 );  
 		$buttn_save_allh -> grid( -row => 1, -column => 3 ); 
-	$lbl_hist	-> grid( -row => 4, -column => 1 ); #HERE IS THE HISTOGRAM
-$fr_progress2	-> grid( -row => 1, -column => 4 );
-	$progress_rlc2	-> grid( -row => 1, -column => 1 );		
+	$lbl_hist	-> grid( -row => 4, -column => 1 ); #HISTOGRAM
+$fr_progress_m	-> grid( -row => 1, -column => 4 );
+	$progress_ref	-> grid( -row => 1, -column => 1 );		
 $fr_refere	-> grid( -row => 1, -column => 5 ); 	
 	$fr_outer	-> grid( -row => 1, -column => 1 );   
 		$fr_outer_rb	-> grid( -row => 1, -column => 1 );
@@ -486,9 +557,9 @@ $fr_refere	-> grid( -row => 1, -column => 5 );
 		$bttn_src_ref	-> pack( -side => 'left' );
 		$bttn_match_one	-> pack( -side => 'left' );
 		$bttn_match_all	-> pack( -side => 'left' );
-} #	==========	==========	==========	==========	==========	</GEOMETRY>
+} #	==========	==========	==========	==========	</GEOMETRY>
 
-{ #	==========	==========	==========	==========	==========	<CONTROLS>
+{ #	==========	==========	==========	==========	<CONTROLS>
 $mw -> bind( '<Control-o>', [ \&B_OPEN_DIR	] );
 $mw -> bind( '<Control-c>', [ \&B_COUNT_MIRNA	] );
 $mw -> bind( '<Control-d>', [ \&B_HIST_MODE	] );
@@ -497,9 +568,9 @@ $mw -> bind( '<Control-b>', [ \&B_MAS_RUN	] );
 $mw -> bind( '<Control-s>', [ \&B_MAS_SAVE	] );
 $mw -> bind( '<Control-r>', [ \&B_RESET_ALL	] );
 $mw -> bind( 'all' => '<Key-Escape>' => sub { exit; } );
-} #	==========	==========	==========	==========	==========	</CONTROLS>
+} #	==========	==========	==========	==========	</CONTROLS>
 
-MainLoop ();	#	==========	==========	==========	==========	</GUI>
+MainLoop ();	#	==========	==========	==========	</GUI>
 
 sub	B_OPEN_DIR # ===============================
 # Sets a working directory and gives a description
@@ -507,11 +578,11 @@ sub	B_OPEN_DIR # ===============================
 # Loads the listbox with valid FASTAs.
 # ==================================================
 {
-	# 1. Unlock all dependant widgets.
+	# Unlock all dependant widgets.
 	_widget_activator( $bttn_mmode,$bttn_count, $scale_up, $scale_down
 	, $rbttn_red, $rbttn_nonred, $rbbtn_tab, $rbttn_nontab,  );
 	
-	# 2. Reset globals.
+	# Reset globals.
 	$workspace	= q{};
 	$txt_status	-> delete ( '0.0', 'end' );
 	$listbox	-> delete ( 0, 'end' );
@@ -579,7 +650,7 @@ sub	B_COUNT_MIRNA # ============================
 {	
 	my @files_array = @_;
 	
-	$progress_lvl	= 0;
+	$progress_c	= 0;
 	$txt_results	-> delete ( '0.0', 'end' );
 	
 	# 1.  Check for missing working directory and (un)lock widgets;
@@ -598,7 +669,7 @@ sub	B_COUNT_MIRNA # ============================
 	}
 	
 	my $dir	= $workspace; # else
-	my $bar_of_progress = 100 / $#files_array;
+	my $bar_of_progress = 100 / ( $#files_array + 1 ) ;
 	
 	# 2. Counts the length distribution.	
 	$txt_results	-> insert( 'end',"THE RESULTS FROM ANALYSES\n"
@@ -689,9 +760,10 @@ sub	B_COUNT_MIRNA # ============================
 		$hist_data{ $files_array[ $j ] } = [ @hist_y ];
 		
 		# 2.5 ProgressBar update.
-		$progress_lvl	+= $bar_of_progress ;
-		print chr ( 7 ) if ( $progress_lvl >= 100 );
-		# $fr_len_distribution -> update;
+		$progress_c	+= $bar_of_progress ;
+		# print $progress_c."\n";
+		print chr ( 7 ) if ( $progress_c == 100 );
+		$mw -> update;
 	}
 	# $results_rlc = ( $txt_results );
 }
@@ -756,7 +828,7 @@ sub	B_RESET_ALL # ==============================
 	( $scale_from, $scale_to,) = ( 15, 30, );
 	( $search_incounter, $search_inmatch ) = ( q{}, q{} );
 	( %hist_data, @hist_y ) = ( (), () );
-	$progress_lvl = 0;				
+	$progress_c = 0;				
 	
 	_widget_deactivator(
 		$bttn_count,$bttn_hmode, $bttn_mmode,$rbttn_nontab
@@ -776,7 +848,7 @@ sub	B_RESET_ALL # ==============================
 	$txt_status	-> insert( 'end', "The reset was successful !\n\n" 
 		. "The program is ready for the next task.\n" );
 	
-	$mw	->update();
+	$mw -> update();
 }
 
 sub	H_show_hist # ==============================
@@ -861,7 +933,7 @@ sub	_hist # ====================================
 			{
 				$max = $_ if !$max || $_ > $max;
 			}
-			# $max += $max * 0.05;	#???
+			$max += $max * 0.05;
 			$hist_title =~ s/.fa//;
 			$hist_title = "$hist_title.NR.png"	if $redF eq 1;
 			$hist_title = "$hist_title.R.png" 	if $redT eq 1;
@@ -889,7 +961,7 @@ sub	M_match_one # ==============================
 # ==================================================
  {
 	$txt_compare -> delete( '0.0', 'end' );
-	
+	$progress_m = 0;
 	my @toSave = ();
 	@toSave = _match( $listbox -> get( $listbox -> curselection ) );
 	my $answer = $mw -> Dialog(
@@ -899,6 +971,7 @@ sub	M_match_one # ==============================
 		-buttons	=> [ 'Yes', 'No'], 
 		-bitmap		=> 'question' 
 		) -> Show(),;
+		$progress_m = 100;
 	if( $answer eq 'Yes' )
 	{
 		my $sample = $listbox -> get( $listbox -> curselection );
@@ -906,9 +979,11 @@ sub	M_match_one # ==============================
 		$sample = "$sample-refDB.csv";
 		
 		SAVE( $sample, @toSave );
+		$progress_m = 100;
 	}
 	elsif( $answer eq 'No' )	{ return(); }
 	elsif( !defined $answer )	{ return(); }
+	$mw -> update;
 }
  
 sub	M_match_all # ==============================
@@ -917,7 +992,8 @@ sub	M_match_all # ==============================
  {
 	$txt_compare -> delete( '0.0', 'end' );
 	my @elements = $listbox -> get( 0, 'end' );
-	
+	$progress_m = 0;	
+	my $progre = 100/ ( $#elements + 1 );
 	my $answer = $mw -> Dialog(
 		-title		=> 'Please Reply', 
 		-text		=> "Would you like to save the results ?", 
@@ -939,6 +1015,8 @@ sub	M_match_all # ==============================
 			open( my $out, '>', "$save_dir/$sample" );
 			print $out @ss;
 			close $out;
+			$progress_m += $progre;
+			$mw -> update;
 		}		
 	}
 	elsif( $answer eq 'No' )
@@ -946,9 +1024,12 @@ sub	M_match_all # ==============================
 		for( my $i= 0; $i <= $#elements; $i++ )
 		{
 			_match( $elements[ $i ] );
+			$progress_m += $progre;
+			$mw -> update;
 		}
 	}
 	elsif( !defined $answer )	{ return(); }
+	print chr ( 7 ) if ( $progress_m == 100 );
 }
 
 sub	_match # ===================================
@@ -1082,60 +1163,60 @@ sub	menu_bar_items # ===========================
 {
 	[ map [ 'cascade', $_ -> [ 0 ], -menuitems => $_ -> [ 1 ] ],
 
-	[ '~File',
-		[
-			[ qw/command Open -command/	=> \&open_dir		],	$line,
-			[ qw/command Run -command/	=> \&results_handler	],	$line,
-			[ qw/command Save  -command/	=> \&save_file		],	$line,
-			[ qw/command Close/					],       $line,
-			[ qw/command Quit -command/	=> \&exit		],
-		],
-	],
-	[ '~Sample verification',
-		[
+	# [ '~File',
+		# [
+			# [ qw/command Open -command/	=> \&open_dir		],	$line,
+			# [ qw/command Run -command/	=> \&results_handler	],	$line,
+			# [ qw/command Save  -command/	=> \&save_file		],	$line,
+			# [ qw/command Close/					],       $line,
+			# [ qw/command Quit -command/	=> \&exit		],
+		# ],
+	# ],
+	# [ '~Sample verification',
+		# [
 			# [ qw/command Redundant -command/	=> \&redT	],
 			# [ qw/command Non-redundant -command/	=> \&redF	],	$line,
 			# [ qw/command Non-tabulated -command/	=> \&tabF	],
 			# [ qw/command Tabulated -command/	=> \&tabT	],	$line,
-			[ qw/cascade Set_interval_from -menuitems/ =>
-				[
-					[ 'command', 15, -command => \sub { $scale_from = 15 } ],
-					[ 'command', 16, -command => \sub { $scale_from = 16 } ],
-					[ 'command', 17, -command => \sub { $scale_from = 17 } ],
-					[ 'command', 18, -command => \sub { $scale_from = 18 } ],
-					[ 'command', 19, -command => \sub { $scale_from = 19 } ],
-					[ 'command', 20, -command => \sub { $scale_from = 20 } ],
-				],
-			],
-			[ qw/cascade Set_interval_to -menuitems/ =>
-				[
-					[ 'command', 25, -command => \sub { $scale_to = 25 } ],
-					[ 'command', 26, -command => \sub { $scale_to = 26 } ],
-					[ 'command', 27, -command => \sub { $scale_to = 27 } ],
-					[ 'command', 28, -command => \sub { $scale_to = 28 } ],
-					[ 'command', 29, -command => \sub { $scale_to = 29 } ],
-					[ 'command', 30, -command => \sub { $scale_to = 30 } ],
-				],
-			],	$line,
-			[ qw/command Reset -command/		=> \&reset	],	$line,
-			[ qw/command Close/	],
-		],
-	],
-	[ '~Histogram mode',
-		[
-			[ qw/command Show_histogram -command/	=> \&show_hist	],
-			[ qw/command Save_histogram -command/	=> \&save_oneh	],
-			[ qw/command Save_all_hist -command/	=> \&save_allh	],	$line,
-			[ qw/command Close/	], 
-		], 
-	],
-	[ '~Match mode',
-		[
-			[ qw/command Non-tabulated -command/	=> \&matF	],
-			[ qw/command Tabulated -command/	=> \&matT	],	$line,
-			[ qw/command Close/	], 
-		],
-	],
+			# [ qw/cascade Set_interval_from -menuitems/ =>
+				# [
+					# [ 'command', 15, -command => \sub { $scale_from = 15 } ],
+					# [ 'command', 16, -command => \sub { $scale_from = 16 } ],
+					# [ 'command', 17, -command => \sub { $scale_from = 17 } ],
+					# [ 'command', 18, -command => \sub { $scale_from = 18 } ],
+					# [ 'command', 19, -command => \sub { $scale_from = 19 } ],
+					# [ 'command', 20, -command => \sub { $scale_from = 20 } ],
+				# ],
+			# ],
+			# [ qw/cascade Set_interval_to -menuitems/ =>
+				# [
+					# [ 'command', 25, -command => \sub { $scale_to = 25 } ],
+					# [ 'command', 26, -command => \sub { $scale_to = 26 } ],
+					# [ 'command', 27, -command => \sub { $scale_to = 27 } ],
+					# [ 'command', 28, -command => \sub { $scale_to = 28 } ],
+					# [ 'command', 29, -command => \sub { $scale_to = 29 } ],
+					# [ 'command', 30, -command => \sub { $scale_to = 30 } ],
+				# ],
+			# ],	$line,
+			# [ qw/command Reset -command/		=> \&reset	],	$line,
+			# [ qw/command Close/	],
+		# ],
+	# ],
+	# [ '~Histogram mode',
+		# [
+			# [ qw/command Show_histogram -command/	=> \&show_hist	],
+			# [ qw/command Save_histogram -command/	=> \&save_oneh	],
+			# [ qw/command Save_all_hist -command/	=> \&save_allh	],	$line,
+			# [ qw/command Close/	], 
+		# ], 
+	# ],
+	# [ '~Match mode',
+		# [
+			# [ qw/command Non-tabulated -command/	=> \&matF	],
+			# [ qw/command Tabulated -command/	=> \&matT	],	$line,
+			# [ qw/command Close/	], 
+		# ],
+	# ],
 	
 	[ '~Controls',
 		[
@@ -1145,11 +1226,11 @@ sub	menu_bar_items # ===========================
 	],
 	[ '~Help',
 		[
-			[ qw/cascade Manual -menuitems/		=>
-				[
-					[ 'command', 'READ_ME(.pdf)', -command => \&pdf_handler	],
-				],
-			],
+			# [ qw/cascade Manual -menuitems/		=>
+				# [
+					# [ 'command', 'READ_ME(.pdf)', -command => \&pdf_handler	],
+				# ],
+			# ],
 			[ qw/command Version -command/	=> \sub { window( qw/Version version.txt/ ) }	],
 			[ qw/command About -command/	=> \sub { window( qw/About about.txt/ ) }	],	$line,
 			[ qw/command Close/	], 
@@ -1211,17 +1292,17 @@ sub	window # ===================================
 	close IN;
 }
 
-sub	pdf_handler # ==============================
-# 
-# ==================================================
-{
-	my $pdf_w =  new MainWindow;
-	$pdf_w -> title( "PDF" );	
-	MainLoop();
-}
+# sub	pdf_handler # ==============================
+# # 
+# # ==================================================
+# {
+	# my $pdf_w =  new MainWindow;
+	# $pdf_w -> title( "PDF" );	
+	# MainLoop();
+# }
 
 sub	_widget_activator # ========================
-# Unlocks an arrey of widgets for further usage.
+# Unlocks an array of widgets for further usage.
 # ==================================================
 {
 	my @widgets = @_;
@@ -1232,7 +1313,7 @@ sub	_widget_activator # ========================
 }
 
 sub	_widget_deactivator # ======================
-# Locks an arrey of widgets for further usage.
+# Locks an array of widgets for further usage.
 # ==================================================
 {
 	my @widgets = @_;
