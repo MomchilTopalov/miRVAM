@@ -37,17 +37,18 @@ use GD::Graph::bars;
 
 #	==========	==========	==========	==========	<GLOBAL VARIABLES>
 my $time = localtime ();					# FOR WELCOMING MESSAGE
-my ( @dir_content, @fasta_array ) = ( (), () );			# FILE VERIFICATION
+my ( @dir_content, @fasta_array, @res_rlc ) 
+= ( (), (), () );						# FILE I/O
 my ( $workspace, $referent_DB ) = ( q{}, q{} );			# FILEHANDLER VARIABLES
 my $state = 'disabled';						# BUTTONS` STATE
 my ( $isF, $isR, $isT, $isS, $isMT, ) = ( 0, 0, 0, 0, 0, );	# RADIOBUTTONS VARIABLES
 my ( $redT, $redF, $tabT, $tabF, $matT, $matF, ) 
 	= ( 0, 0, 0, 0, 0, 0, );				# RADIOBUTTON FUNCS	
-my ( $var1, $var2, $var3, $var4 ) = ( 0, 0, 0, 0, );		# CHECKBUTTON VARIABLES
+my ( $var1, $var2, $var3, $var4, $var_TU ) 
+	= ( 0, 0, 0, 0, 0, 0 );					# CHECKBUTTON VARIABLES
 my ( $scale_from, $scale_to,) = ( 15, 30, );			# INTERVAL
 my ( $search_incounter, $search_inmatch ) = ( q{}, q{} );	# SEARCH
-my ( %hist_data, @hist_y ) = ( (), () );			# HISTOGRAM ATRIBUTES
-my @res_rlc = ();						# &SAVE VARIABLES
+my %hist_data = ();						# HISTOGRAM ATRIBUTES
 my ( $progress_c, $progress_m ) = ( 0, 0, );			# PROGRESSBAR VARIABLES
 my @colors = ( 
 	 0, '#ff002a',  1, '#ff0014',  2, '#ff000a',  3, '#ff0500',  4, '#ff1000',
@@ -69,7 +70,7 @@ my @colors = (
 	80, '#2800ff', 81, '#3d00ff', 82, '#4800ff', 83, '#5300ff', 84, '#5d00ff',
 	85, '#6e00ff', 86, '#8300ff', 87, '#8e00ff', 88, '#9900ff', 89, '#a300ff',
 	90, '#ae00ff', 91, '#c900ff', 92, '#d400ff', 93, '#df00ff', 94, '#e900ff',
-	95, '#f400ff', 96, '#ff00f3', 97, '#ff00e3', 98, '#ff00d9', 99, '#ff00ce', 
+	95, '#f400ff', 96, '#ff00f3', 97, '#ff00e3', 98, '#ff00d9', 99, '#ff00ce',
 	);
 my @types_img = (
 		[ "Log files", [ qw/.png .jpg/] ],
@@ -77,6 +78,7 @@ my @types_img = (
 	);	
 Readonly my $line	=> q{"};				# MENU_SEPARATOR
 Readonly my $sp		=> q/ /;				# SPACE
+
 #	==========	==========	==========	==========	</GLOBAL VARIABLES>
 
 #	==========	==========	==========	==========	<GUI>
@@ -145,6 +147,7 @@ my $lbl_radiobttns	= $fr_radiobttns	-> Label(
 	-font		=> '-*-Calibri-R-Normal-*-*-15' , 
 	); 
 my $rbttn_nontab	= $fr_radiobttns	-> Radiobutton(
+	-activebackground => '#74fff0',	
 	-text		=> "Non-tabulated$sp|",
 	-font		=> '-*-Calibri-R-Normal-*-*-12' ,
 	-value		=> 1,		
@@ -185,7 +188,7 @@ my $fr_scale	= $fr_options	-> Frame();
 my $scale_down	= $fr_scale	-> Scale(
 	-label		=> "Min [ 15, 20 ]",
 	-font		=> '-*-Calibri-R-Normal-*-*-15' ,
-	-activebackground => 'green',	
+	-activebackground => '#74fff0',	
 	-orient		=> 'h',
 	-length 	=> 95,
 	-digit		=>  1,	
@@ -201,7 +204,7 @@ my $scale_label	= $fr_scale	-> Label(
 my $scale_up	= $fr_scale	-> Scale(
 	-label		=>"Max [ 25, 30 ]",
 	-font		=> '-*-Calibri-R-Normal-*-*-15' ,
-	-activebackground => 'green',	
+	-activebackground => '#74fff0',	
 	-orient		=> 'h',	
 	-length		=> 95,		
 	-digit		=>  1,	
@@ -246,7 +249,7 @@ my $bttn_src_rlc	= $fr_results	->Button(
 	);	
 my $bttn_saveC	= $fr_results	->Button(
 	-image		=> $fr_results -> Photo( -file => 'save.png' ),
-	-activebackground => 'green',	
+	-activebackground => 'blue',	
 	-state		=> $state,
 	-command 	=> sub{ 
 		&SAVE( 'length_distribution.txt', @res_rlc ) 
@@ -375,13 +378,19 @@ my $cb2	= $fr_outer_cb -> Checkbutton(
 	-font		=> '-*-Calibri-R-Normal-*-*-12' ,
         -state		=> $state,	
         -variable	=>\$var2, 
-        );	
+        );	 
 my $cb3	= $fr_outer_cb -> Checkbutton(
 	-text		=> "Matched sequences\t|",
 	-font		=> '-*-Calibri-R-Normal-*-*-12' ,
         -state		=> $state,	
         -variable	=>\$var3, 
-        );	
+        );
+my $cb_TU	= $fr_outer_cb -> Checkbutton(
+	-text		=> "Convert U to T\t|",
+	-font		=> '-*-Calibri-R-Normal-*-*-12' ,
+        -state		=> $state,	
+        -variable	=>\$var_TU, 
+        );
 my $cb4	= $fr_outer_cb -> Checkbutton(
 	-text		=> "Lenght of the sequences\t|",
 	-font		=> '-*-Calibri-R-Normal-*-*-12' ,
@@ -429,11 +438,11 @@ my $bttn_match_all	= $fr_outertxt	->Button(
 	-state		=> $state,
 	-command	=> \&M_match_all, 
 	);
-{ #	==========	==========	==========	==========	==========	<MOUSEOVER>
+{ #	==========	==========	==========	==========	<MOUSEOVER>
 my $bl_bttn_open	= $fr_buttons	-> Balloon( -statusbar => $lbl_info );
 $bl_bttn_open -> attach( $bttn_open,
-	-balloonmsg	=> "Open Dir",  
-	-statusmsg	=> "Browses for the directory \nwith files of sequenced miRNA samples.",
+	-balloonmsg	=> "Open\nWorkDir",  
+	-statusmsg	=> "Pleace, browses for the directory\nwith files of sequenced miRNA samples.",
 	);	
 my $bl_bttn_count	= $fr_buttons	-> Balloon( -statusbar => $lbl_info );
 $bl_bttn_count	-> attach( $bttn_count,
@@ -498,9 +507,9 @@ $bl_bttn_match_all	-> attach( $bttn_match_all,
 	-balloonmsg	=> "",  
 	-statusmsg	=> "",
 	);
-} #	==========	==========	==========	==========	==========	</MOUSEOVER>
+} #	==========	==========	==========	==========	</MOUSEOVER>
 
-{ #	==========	==========	==========	==========	==========	<GEOMETRY>
+{ #	==========	==========	==========	==========	<GEOMETRY>
 $fr_len_distribution	-> grid( -row => 1, -column => 1 );
 	$fr_status	-> grid( -row => 1, -column => 1 ); 
 		$txt_status	-> grid( -row => 1, -column => 1 );
@@ -547,9 +556,10 @@ $fr_refere	-> grid( -row => 1, -column => 5 );
 			$rbbt_ref_tab	-> grid( -row => 3, -column => 1 );
 	$fr_outer_cb	-> grid( -row => 1, -column => 2 );
 		$lbl_pattern	-> grid( -row => 1, -column => 1 );	
-		$cb1		-> grid( -row => 2, -column => 1 );	
-		$cb2		-> grid( -row => 3, -column => 1 );	
-		$cb3		-> grid( -row => 4, -column => 1 );	
+		$cb1		-> grid( -row => 2, -column => 1 );
+		$cb2		-> grid( -row => 3, -column => 1 );
+		$cb3		-> grid( -row => 4, -column => 1 );
+		$cb_TU		-> grid( -row => 4, -column => 2 );		
 		$cb4		-> grid( -row => 5, -column => 1 );	
 	$fr_outertxt	-> grid( -row => 2, -column => 1 );                 
 		$txt_compare	-> pack( -side => 'bottom' );
@@ -679,7 +689,7 @@ sub	B_COUNT_MIRNA # ============================
 		my ( $eq_seq_copies, $total_copies, $seq_len, ) = ( 0, 0, 0, );
 		my ( %seq_len_hash, %redF_hash ) = ( (), (), );
 		my $rlc_tbl = Text::Table -> new( qw/seq_len copies [%]/ );
-		
+		my @hist_y = ();
 		# 2.1 Sums the copies of all miRNA with same length.
 		$txt_results -> insert( 'end', "\n$files_array[ $j ]\n" );
 		push( @res_rlc, "\n$files_array[ $j ]\n" );
@@ -743,14 +753,11 @@ sub	B_COUNT_MIRNA # ============================
 		foreach my $key ( sort keys %seq_len_hash )
 		{	
 			my $total_copies_percent = 0;
-			if ( $key ge $scale_from  and $key le $scale_to )
-			{
-				push( @hist_y, $seq_len_hash{ $key } );
+			push( @hist_y, $seq_len_hash{ $key } );
 				
-				$total_copies_percent 
-					= sprintf( "%.2f", ( $seq_len_hash{ $key } / $total_copies ) * 100 );
-				$rlc_tbl -> add( $key, $seq_len_hash{ $key }, $total_copies_percent . "%\n" );
-			}
+			$total_copies_percent 
+				= sprintf( "%.2f", ( $seq_len_hash{ $key } / $total_copies ) * 100 );
+			$rlc_tbl -> add( $key, $seq_len_hash{ $key }, $total_copies_percent . "%\n" );
 		}		
 		$rlc_tbl	-> add( "total_copies", $total_copies, "100%" );
 		push( @res_rlc, $rlc_tbl );
@@ -765,7 +772,6 @@ sub	B_COUNT_MIRNA # ============================
 		print chr ( 7 ) if ( $progress_c == 100 );
 		$mw -> update;
 	}
-	# $results_rlc = ( $txt_results );
 }
 
 sub	B_HIST_MODE # ==============================
@@ -788,7 +794,7 @@ sub	B_MATCH_MODE # =============================
 # ==================================================
 {
 	_widget_activator( $bttn_src_ref,$bttn_match_one, $bttn_match_all 
-		, $cb1, $cb2, $cb3, $cb4, $rbbt_ref_tab, $rbbt_ref_nontab 
+		, $cb1, $cb2, $cb3, $cb4, $cb_TU, $rbbt_ref_tab, $rbbt_ref_nontab 
 		);
 
 	my @types = ( 
@@ -820,23 +826,23 @@ sub	B_RESET_ALL # ==============================
 #
 # ==================================================
 {
-	( @dir_content, @fasta_array ) = ( (), () );
+	( @dir_content, @fasta_array, @res_rlc ) = ( (), (), () );	
 	( $workspace, $referent_DB ) = ( q{}, q{} );
 	( $isF, $isR, $isT, $isS, $isMT, ) = ( 0, 0, 0, 0, 0, );
 	( $redT, $redF, $tabT, $tabF, $matT, $matF, ) = ( 0, 0, 0, 0, 0, 0, );
-	( $var1, $var2, $var3, $var4 ) = ( 0, 0, 0, 0, );
+	( $var1, $var2, $var3, $var4, $var_TU ) = ( 0, 0, 0, 0, 0, );
 	( $scale_from, $scale_to,) = ( 15, 30, );
 	( $search_incounter, $search_inmatch ) = ( q{}, q{} );
-	( %hist_data, @hist_y ) = ( (), () );
-	$progress_c = 0;				
-	
+	( $progress_c, $progress_m ) = ( 0, 0 );				
+	%hist_data = ();
+
 	_widget_deactivator(
 		$bttn_count,$bttn_hmode, $bttn_mmode,$rbttn_nontab
 		, $rbbtn_tab, $rbttn_red, $rbttn_nonred, $scale_down
 		, $scale_up, $bttn_src_rlc, $bttn_saveC, $bttn_show_h
 		, $bttn_save_oneh, $buttn_save_allh, $rbbt_ref_nontab
-		, $rbbt_ref_tab, $cb1, $cb2, $cb3, $cb4, $bttn_src_ref
-		, $bttn_match_one, $bttn_match_all,
+		, $rbbt_ref_tab, $cb1, $cb2, $cb3, $cb4, $cb_TU
+		, $bttn_src_ref, $bttn_match_one, $bttn_match_all,
 		);
 
 	$fr_histbox -> Label( -width => 58, -height => 27, )-> grid( -row => 4, -column => 1 );
@@ -1122,8 +1128,16 @@ sub	_match # ===================================
 		}
 		if( $var3 eq 1 )
 		{
-			$txt_compare -> insert( 'end', "$matches[ $k ]\t" );
-			push( @res_ref, "$matches[ $k ]," );
+			if( $var_TU eq 1 )
+			{
+				$matches[ $k ] =~tr/U/T/;
+				$txt_compare -> insert( 'end', "$matches[ $k ]\t" );
+				push( @res_ref, "$matches[ $k ]," );
+			}else
+			{
+				$txt_compare -> insert( 'end', "$matches[ $k ]\t" );
+				push( @res_ref, "$matches[ $k ]," );
+			}
 		}
 		if( $var4 eq 1 )
 		{
