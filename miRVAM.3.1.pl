@@ -307,10 +307,7 @@ my $buttn_save_allh	= $fr_histopt	-> Button(
 	-image		=> $fr_histopt	-> Photo( -file => 'save_allhist.png' ),
 	-activebackground => 'green',	
 	-state		=> $state,
-	-command	=>  sub{ &H_save_allh( &_hist( 
-		$listbox -> get( $listbox -> curselection )
-		,%hist_data ) ) 
-		}, 
+	-command	=>  sub{ &H_save_allh( &_hist( 1, %hist_data ) ) }, 
 	);
 my $lbl_hist	= $fr_histbox -> Label(
 	-width		=> 58,	
@@ -753,8 +750,6 @@ sub	B_COUNT_MIRNA # ============================
 		foreach my $key ( sort keys %seq_len_hash )
 		{	
 			my $total_copies_percent = 0;
-			push( @hist_y, $seq_len_hash{ $key } );
-				
 			$total_copies_percent 
 				= sprintf( "%.2f", ( $seq_len_hash{ $key } / $total_copies ) * 100 );
 			$rlc_tbl -> add( $key, $seq_len_hash{ $key }, $total_copies_percent . "%\n" );
@@ -764,10 +759,10 @@ sub	B_COUNT_MIRNA # ============================
 		$txt_results	-> insert( 'end', $rlc_tbl );
 		
 		# 2.4 Load data for histogram.
-		$hist_data{ $files_array[ $j ] } = [ @hist_y ];
+		$hist_data{ $files_array[ $j ] } = \%seq_len_hash;
 		
 		# 2.5 ProgressBar update.
-		$progress_c	+= $bar_of_progress ;
+		$progress_c += $bar_of_progress ;
 		# print $progress_c."\n";
 		print chr ( 7 ) if ( $progress_c == 100 );
 		$mw -> update;
@@ -779,7 +774,8 @@ sub	B_HIST_MODE # ==============================
 # ==================================================
 {
 	_widget_activator( $bttn_show_h, $bttn_save_oneh, $buttn_save_allh );
-	$listbox -> bind( '<Double-Button-1>', sub{ &H_show_hist(), &H_save_oneh() } );
+	# $listbox -> bind( '<Button-1>', sub{ \&H_show_hist(), \&H_save_oneh() } );
+	$listbox -> bind( '<Double-Button-1>', sub{ \&H_show_hist(), \&H_save_oneh() } );
 	
 	$txt_status	-> delete( '0.0', 'end' );
 	$txt_status	-> insert( 'end', "Pleace, choose from the listbox\n"
@@ -927,23 +923,32 @@ sub	_hist # ====================================
 # ==================================================
 {	
 	my ( $hist_title, %_hist_data ) = @_;
-	
 	my $graph = GD::Graph::bars-> new( 355, 355 );
-	foreach( sort keys %_hist_data )
+	foreach my $k (sort keys %hist_data)
 	{
-		if( $_ eq $hist_title )
-		{	
-			my $data = [ [ $scale_from .. $scale_to ], [ @{ $_hist_data{ $_ } } ] ];
+		if( $k eq $hist_title )
+		{
+			my @interval = ();
 			my $max = 0;
-			foreach( @{ $_hist_data{ $_ } } ) 
-			{
-				$max = $_ if !$max || $_ > $max;
-			}
-			$max += $max * 0.05;
+			
 			$hist_title =~ s/.fa//;
 			$hist_title = "$hist_title.NR.png"	if $redF eq 1;
 			$hist_title = "$hist_title.R.png" 	if $redT eq 1;
 			
+			foreach my $kk (sort keys %{ $hist_data{$k}})
+			{
+				if( $kk >= $scale_from and $kk <= $scale_to )
+				{
+					push( @interval, $hist_data{$k}{$kk} );
+				}
+			}
+			for my $i ( 0 .. $#interval ) 
+			{
+				$max = $interval[$i] if !$max || $interval[$i] > $max;
+				$max += $max * 0.05;
+			}
+			
+			my $data = [ [ $scale_from .. $scale_to ], [ @interval ] ];
 			$graph -> set( 
 				x_label		=> 'Lenght of the sequences',
 				y_label		=> 'Copies',
