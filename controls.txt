@@ -12,12 +12,6 @@ THIS IS A LIST OF ALL HOTKEYS AND THEIR FUNCTIONS.
 <Control-m>	Browses for a referent data base in the file system				|
 		with standart dialog.							|
 
-<Control-b>	Bulk analyzes at once.						|
-		<Choosing from all option before run is highly recomended>			|
-
-<Control-s>	Bulk save. Saves all results at once.					|
-		<Using after Bulk run is recomneded>					|
-
 <Control-r>	Resets all options. 							|
 
 <Escape>	Exit form miRVAM.							|

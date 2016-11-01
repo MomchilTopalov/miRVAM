@@ -14,15 +14,15 @@
 
 #!usr/bin/perl
 
-#	BASIC
+#	BASIC MODULES
 use strict;
 use warnings;
 use autodie;
 use utf8;
 use Readonly;
-use subs qw/menu_bar_items/;
+# use subs qw/menu_bar_items/;
 
-#	MODULES
+#	CPAN MODULES
 use Tk;
 use Tk::PNG;
 use Tk::JPEG;
@@ -34,6 +34,12 @@ use Text::Table;
 use MIME::Base64;
 use GD::Graph;
 use GD::Graph::bars;
+
+#	CUSTOM MODULES
+use WidgetStatus;
+use SetTitle;
+use Search;
+use Window;
 
 #	==========	==========	==========	==========	<GLOBAL VARIABLES>
 my $time = localtime ();					# FOR WELCOMING MESSAGE
@@ -71,10 +77,6 @@ my @colors = (
 	85, '#6e00ff', 86, '#8300ff', 87, '#8e00ff', 88, '#9900ff', 89, '#a300ff',
 	90, '#ae00ff', 91, '#c900ff', 92, '#d400ff', 93, '#df00ff', 94, '#e900ff',
 	95, '#f400ff', 96, '#ff00f3', 97, '#ff00e3', 98, '#ff00d9', 99, '#ff00ce',
-	);
-my @types_img = (
-		[ "Log files", [ qw/.png .jpg/] ],
-		[ "All files", '*'],
 	);	
 Readonly my $line	=> q{"};				# MENU_SEPARATOR
 Readonly my $sp		=> q/ /;				# SPACE
@@ -85,7 +87,7 @@ Readonly my $sp		=> q/ /;				# SPACE
 my $mw = new MainWindow();
 $mw -> title( "miRVAM" );
 $mw -> configure( 
-	-menu => my $menu_bar =	$mw -> Menu(-menuitems => menu_bar_items ) 
+	-menu => my $menu_bar =	$mw -> Menu( -menuitems => menu_bar_items() ) 
 	);
 
 my $fr_len_distribution	= $mw	-> Frame(); 
@@ -103,7 +105,7 @@ my $txt_status	= $fr_status	-> Scrolled(
 	);
 $txt_status	-> insert('end', "Welcome to miRVAM.\n"
 	. "$time\nis an excellent time to do science!\n\n"
-	. "Pleace,choose the directory with your\nFASTA files.\n" 
+	. "Pleace,choose the directory\nwith your\nFASTA files.\n" 
 	);
 	
 my $fr_buttons	= $fr_len_distribution	-> Frame();	
@@ -147,7 +149,8 @@ my $lbl_radiobttns	= $fr_radiobttns	-> Label(
 	-font		=> '-*-Calibri-R-Normal-*-*-15' , 
 	); 
 my $rbttn_nontab	= $fr_radiobttns	-> Radiobutton(
-	-activebackground => '#74fff0',	
+	# -activebackground => '#74fff0',	
+	# -background	=> '#fe5100',
 	-text		=> "Non-tabulated$sp|",
 	-font		=> '-*-Calibri-R-Normal-*-*-12' ,
 	-value		=> 1,		
@@ -571,8 +574,6 @@ $mw -> bind( '<Control-o>', [ \&B_OPEN_DIR	] );
 $mw -> bind( '<Control-c>', [ \&B_COUNT_MIRNA	] );
 $mw -> bind( '<Control-d>', [ \&B_HIST_MODE	] );
 $mw -> bind( '<Control-m>', [ \&B_MATCH_MODE	] );
-$mw -> bind( '<Control-b>', [ \&B_MAS_RUN	] );
-$mw -> bind( '<Control-s>', [ \&B_MAS_SAVE	] );
 $mw -> bind( '<Control-r>', [ \&B_RESET_ALL	] );
 $mw -> bind( 'all' => '<Key-Escape>' => sub { exit; } );
 } #	==========	==========	==========	==========	</CONTROLS>
@@ -586,7 +587,7 @@ sub	B_OPEN_DIR # ===============================
 # ==================================================
 {
 	# Unlock all dependant widgets.
-	_widget_activator( $bttn_mmode,$bttn_count, $scale_up, $scale_down
+	widgetActivator( $bttn_mmode,$bttn_count, $scale_up, $scale_down
 	, $rbttn_red, $rbttn_nonred, $rbbtn_tab, $rbttn_nontab,  );
 	
 	# Reset globals.
@@ -663,7 +664,7 @@ sub	B_COUNT_MIRNA # ============================
 	# 1.  Check for missing working directory and (un)lock widgets;
 	if( $workspace eq q{} )
 	{
-		_widget_deactivator( $bttn_hmode, $bttn_save_oneh, );
+		widgetDeactivator( $bttn_hmode, $bttn_save_oneh, );
 		
 		$txt_results	-> delete( '0.0', 'end' );
 		$txt_status	-> delete( '0.0', 'end' );
@@ -672,13 +673,13 @@ sub	B_COUNT_MIRNA # ============================
 	}
 	else 
 	{
-		_widget_activator( $bttn_hmode, $bttn_src_rlc, $bttn_saveC );
+		widgetActivator( $bttn_hmode, $bttn_src_rlc, $bttn_saveC );
 	}
 	
 	my $dir	= $workspace; # else
 	my $bar_of_progress = 100 / ( $#files_array + 1 ) ;
 	
-	# 2. Counts the length distribution.	
+	# Counts the length distribution.	
 	$txt_results	-> insert( 'end',"THE RESULTS FROM ANALYSES\n"
 		."OF LENGHT DISTRIBUTION\nFOR THE UPLOADED SAMPLES ARE:\n" );
 	for ( my $j = 0; $j <= $#files_array; $j++ )
@@ -687,7 +688,7 @@ sub	B_COUNT_MIRNA # ============================
 		my ( %seq_len_hash, %redF_hash ) = ( (), (), );
 		my $rlc_tbl = Text::Table -> new( qw/seq_len copies [%]/ );
 		my @hist_y = ();
-		# 2.1 Sums the copies of all miRNA with same length.
+		# Sums the copies of all miRNA with same length.
 		$txt_results -> insert( 'end', "\n$files_array[ $j ]\n" );
 		push( @res_rlc, "\n$files_array[ $j ]\n" );
 		open( FILE_ANALYZER, "$dir/$files_array[ $j ]" );
@@ -733,7 +734,7 @@ sub	B_COUNT_MIRNA # ============================
 		}
 		close FILE_ANALYZER;
 		
-		# 2.2 Non-redundant manager.
+		# Non-redundant manager.
 		if( $redF eq 1 )
 		{
 			foreach my $key ( sort keys %redF_hash )
@@ -746,7 +747,7 @@ sub	B_COUNT_MIRNA # ============================
 				$seq_len_hash{ length ( $key ) } += $eq_seq_copies;	
 			}
 		}
-		# 2.3 Load results in a table and print.
+		# Load results in a table and print.
 		foreach my $key ( sort keys %seq_len_hash )
 		{	
 			my $total_copies_percent = 0;
@@ -758,10 +759,10 @@ sub	B_COUNT_MIRNA # ============================
 		push( @res_rlc, $rlc_tbl );
 		$txt_results	-> insert( 'end', $rlc_tbl );
 		
-		# 2.4 Load data for histogram.
+		# Load data for histogram.
 		$hist_data{ $files_array[ $j ] } = \%seq_len_hash;
 		
-		# 2.5 ProgressBar update.
+		# ProgressBar update.
 		$progress_c += $bar_of_progress ;
 		# print $progress_c."\n";
 		print chr ( 7 ) if ( $progress_c == 100 );
@@ -773,7 +774,7 @@ sub	B_HIST_MODE # ==============================
 # Allows to draw and save histograms.
 # ==================================================
 {
-	_widget_activator( $bttn_show_h, $bttn_save_oneh, $buttn_save_allh );
+	widgetActivator( $bttn_show_h, $bttn_save_oneh, $buttn_save_allh );
 	# $listbox -> bind( '<Button-1>', sub{ \&H_show_hist(), \&H_save_oneh() } );
 	$listbox -> bind( '<Double-Button-1>', sub{ \&H_show_hist(), \&H_save_oneh() } );
 	
@@ -789,7 +790,7 @@ sub	B_MATCH_MODE # =============================
 # Allows to compare samples with referent DB.
 # ==================================================
 {
-	_widget_activator( $bttn_src_ref,$bttn_match_one, $bttn_match_all 
+	widgetActivator( $bttn_src_ref,$bttn_match_one, $bttn_match_all 
 		, $cb1, $cb2, $cb3, $cb4, $cb_TU, $rbbt_ref_tab, $rbbt_ref_nontab 
 		);
 
@@ -802,20 +803,6 @@ sub	B_MATCH_MODE # =============================
 	$txt_status -> delete( '0.0', 'end' );
 	$txt_status -> insert( 'end', "The reference database is:\n$filepath\n" );
 	$referent_DB = $filepath;
-}
-
-sub	B_MAS_RUN # ================================
-# 
-# ==================================================
-{
-
-}
-
-sub	B_MAS_SAVE # ===============================
-#
-# ==================================================
-{
-
 }
 
 sub	B_RESET_ALL # ==============================
@@ -832,7 +819,7 @@ sub	B_RESET_ALL # ==============================
 	( $progress_c, $progress_m ) = ( 0, 0 );				
 	%hist_data = ();
 
-	_widget_deactivator(
+	widgetDeactivator(
 		$bttn_count,$bttn_hmode, $bttn_mmode,$rbttn_nontab
 		, $rbbtn_tab, $rbttn_red, $rbttn_nonred, $scale_down
 		, $scale_up, $bttn_src_rlc, $bttn_saveC, $bttn_show_h
@@ -873,10 +860,12 @@ sub	H_save_oneh # ==============================
 # ==================================================
 {
 	my $file_title = $listbox -> get( $listbox -> curselection );
-	$file_title =~ s/.fa//;
-	$file_title = "$file_title.NR.png"	if $redF eq 1;
-	$file_title = "$file_title.R.png" 	if $redT eq 1;
-	
+	$file_title = setTitle( $file_title, ".NR.png" )	if $redF eq 1;
+	$file_title = setTitle( $file_title, ".R.png" )	if $redT eq 1;
+	my @types_img = (
+		[ "Log files", [ qw/.png .jpg/] ],
+		[ "All files", '*'],
+	);
 	my $filepath = $mw -> getSaveFile(
 		-filetypes	=> \@types_img,
 		-initialfile	=> $file_title,
@@ -902,9 +891,8 @@ sub	H_save_allh # ==============================
 	for( my $i= 0; $i <= $#elements; $i++ )
 	{
 		my $file_title = $elements[ $i ];
-		$file_title =~ s/.fa//;
-		$file_title = "$file_title.NR.png"	if $redF eq 1;
-		$file_title = "$file_title.R.png" 	if $redT eq 1;
+		$file_title = setTitle( $file_title, ".NR.png" )	if $redF eq 1;
+		$file_title = setTitle( $file_title, ".R.png" )	if $redT eq 1;
 		
 		my $png = _hist( 
 			$elements[ $i ],
@@ -930,10 +918,8 @@ sub	_hist # ====================================
 		{
 			my @interval = ();
 			my $max = 0;
-			
-			$hist_title =~ s/.fa//;
-			$hist_title = "$hist_title.NR.png"	if $redF eq 1;
-			$hist_title = "$hist_title.R.png" 	if $redT eq 1;
+			$hist_title = setTitle( $hist_title, ".NR.png" )	if $redF eq 1;
+			$hist_title = setTitle( $hist_title, ".R.png" )	if $redT eq 1;
 			
 			foreach my $kk (sort keys %{ $hist_data{$k}})
 			{
@@ -945,8 +931,8 @@ sub	_hist # ====================================
 			for my $i ( 0 .. $#interval ) 
 			{
 				$max = $interval[$i] if !$max || $interval[$i] > $max;
-				$max += $max * 0.05;
 			}
+			$max += $max * 0.05;
 			
 			my $data = [ [ $scale_from .. $scale_to ], [ @interval ] ];
 			$graph -> set( 
@@ -986,8 +972,7 @@ sub	M_match_one # ==============================
 	if( $answer eq 'Yes' )
 	{
 		my $sample = $listbox -> get( $listbox -> curselection );
-		$sample =~ s/.fa//;
-		$sample = "$sample-refDB.csv";
+		$sample = setTitle( $sample, "-refDB.csv" );
 		
 		SAVE( $sample, @toSave );
 		$progress_m = 100;
@@ -1011,7 +996,7 @@ sub	M_match_all # ==============================
 		-default_button	=> 'Yes',
 		-buttons	=> [ 'Yes', 'No'], 
 		-bitmap		=> 'question' 
-		) -> Show(),;
+		) -> Show();
 	if( $answer eq 'Yes' )
 	{
 		my $save_dir = $mw -> chooseDirectory();
@@ -1019,8 +1004,7 @@ sub	M_match_all # ==============================
 		for( my $i= 0; $i <= $#elements; $i++ )
 		{
 			my $sample = $elements[ $i ];
-			$sample =~ s/.fa//;
-			$sample = "$sample-refDB.csv";
+			$sample = setTitle( $sample, "-refDB.csv" );
 			
 			my @ss = _match( $elements[ $i ] );
 			open( my $out, '>', "$save_dir/$sample" );
@@ -1047,7 +1031,7 @@ sub	_match # ===================================
 # 
 # ==================================================
 {
-	_widget_activator( $bttn_src_ref );
+	widgetActivator( $bttn_src_ref );
 	
 	my ( %ref_db, %sampleHash, ) = ( (), () ); 
 	my ( $refID, $refS, $sampleID, $sampleS, ) = ( q{}, q{}, q{}, q{}, );
@@ -1075,7 +1059,7 @@ sub	_match # ===================================
 		}
 		else
 		{
-			_widget_deactivator( $bttn_src_ref );
+			widgetDeactivator( $bttn_src_ref );
 			$txt_status -> delete( '0.0', 'end' );
 			$txt_status -> insert( 'end', "WARNING ! ! ! \n\n"
 				. "Missing tabulation format\nfor the referent DB\n"
@@ -1118,6 +1102,7 @@ sub	_match # ===================================
 	
 	$txt_compare -> insert( 'end', "[ @_ ] is compared to referent DB\n[ $referent_DB ]\n\n" );
 	push( @res_ref, "[ @_ ] - [ $referent_DB ]\n" );
+	my $match_tbl = Text::Table -> new(q//);
 	for( my $k = 0; $k <= $#matches; $k++ )
 	{	
 		my $matched_seq_len = length( $matches[ $k ] );	
@@ -1182,60 +1167,60 @@ sub	menu_bar_items # ===========================
 {
 	[ map [ 'cascade', $_ -> [ 0 ], -menuitems => $_ -> [ 1 ] ],
 
-	# [ '~File',
-		# [
-			# [ qw/command Open -command/	=> \&open_dir		],	$line,
-			# [ qw/command Run -command/	=> \&results_handler	],	$line,
-			# [ qw/command Save  -command/	=> \&save_file		],	$line,
-			# [ qw/command Close/					],       $line,
-			# [ qw/command Quit -command/	=> \&exit		],
-		# ],
-	# ],
-	# [ '~Sample verification',
-		# [
-			# [ qw/command Redundant -command/	=> \&redT	],
-			# [ qw/command Non-redundant -command/	=> \&redF	],	$line,
-			# [ qw/command Non-tabulated -command/	=> \&tabF	],
-			# [ qw/command Tabulated -command/	=> \&tabT	],	$line,
-			# [ qw/cascade Set_interval_from -menuitems/ =>
-				# [
-					# [ 'command', 15, -command => \sub { $scale_from = 15 } ],
-					# [ 'command', 16, -command => \sub { $scale_from = 16 } ],
-					# [ 'command', 17, -command => \sub { $scale_from = 17 } ],
-					# [ 'command', 18, -command => \sub { $scale_from = 18 } ],
-					# [ 'command', 19, -command => \sub { $scale_from = 19 } ],
-					# [ 'command', 20, -command => \sub { $scale_from = 20 } ],
-				# ],
-			# ],
-			# [ qw/cascade Set_interval_to -menuitems/ =>
-				# [
-					# [ 'command', 25, -command => \sub { $scale_to = 25 } ],
-					# [ 'command', 26, -command => \sub { $scale_to = 26 } ],
-					# [ 'command', 27, -command => \sub { $scale_to = 27 } ],
-					# [ 'command', 28, -command => \sub { $scale_to = 28 } ],
-					# [ 'command', 29, -command => \sub { $scale_to = 29 } ],
-					# [ 'command', 30, -command => \sub { $scale_to = 30 } ],
-				# ],
-			# ],	$line,
-			# [ qw/command Reset -command/		=> \&reset	],	$line,
-			# [ qw/command Close/	],
-		# ],
-	# ],
-	# [ '~Histogram mode',
-		# [
-			# [ qw/command Show_histogram -command/	=> \&show_hist	],
-			# [ qw/command Save_histogram -command/	=> \&save_oneh	],
-			# [ qw/command Save_all_hist -command/	=> \&save_allh	],	$line,
-			# [ qw/command Close/	], 
-		# ], 
-	# ],
-	# [ '~Match mode',
-		# [
-			# [ qw/command Non-tabulated -command/	=> \&matF	],
-			# [ qw/command Tabulated -command/	=> \&matT	],	$line,
-			# [ qw/command Close/	], 
-		# ],
-	# ],
+	[ '~File',
+		[
+			[ qw/command Open -command/	=> \&open_dir		],	$line,
+			[ qw/command Run -command/	=> \&results_handler	],	$line,
+			[ qw/command Save  -command/	=> \&save_file		],	$line,
+			[ qw/command Close/					],       $line,
+			[ qw/command Quit -command/	=> \&exit		],
+		],
+	],
+	[ '~Sample verification',
+		[
+			[ qw/command Redundant -command/	=> \&redT	],
+			[ qw/command Non-redundant -command/	=> \&redF	],	$line,
+			[ qw/command Non-tabulated -command/	=> \&tabF	],
+			[ qw/command Tabulated -command/	=> \&tabT	],	$line,
+			[ qw/cascade Set_interval_from -menuitems/ =>
+				[
+					[ 'command', 15, -command => \sub { $scale_from = 15 } ],
+					[ 'command', 16, -command => \sub { $scale_from = 16 } ],
+					[ 'command', 17, -command => \sub { $scale_from = 17 } ],
+					[ 'command', 18, -command => \sub { $scale_from = 18 } ],
+					[ 'command', 19, -command => \sub { $scale_from = 19 } ],
+					[ 'command', 20, -command => \sub { $scale_from = 20 } ],
+				],
+			],
+			[ qw/cascade Set_interval_to -menuitems/ =>
+				[
+					[ 'command', 25, -command => \sub { $scale_to = 25 } ],
+					[ 'command', 26, -command => \sub { $scale_to = 26 } ],
+					[ 'command', 27, -command => \sub { $scale_to = 27 } ],
+					[ 'command', 28, -command => \sub { $scale_to = 28 } ],
+					[ 'command', 29, -command => \sub { $scale_to = 29 } ],
+					[ 'command', 30, -command => \sub { $scale_to = 30 } ],
+				],
+			],	$line,
+			[ qw/command Reset -command/		=> \&reset	],	$line,
+			[ qw/command Close/	],
+		],
+	],
+	[ '~Histogram mode',
+		[
+			[ qw/command Show_histogram -command/	=> \&show_hist	],
+			[ qw/command Save_histogram -command/	=> \&save_oneh	],
+			[ qw/command Save_all_hist -command/	=> \&save_allh	],	$line,
+			[ qw/command Close/	], 
+		], 
+	],
+	[ '~Match mode',
+		[
+			[ qw/command Non-tabulated -command/	=> \&matF	],
+			[ qw/command Tabulated -command/	=> \&matT	],	$line,
+			[ qw/command Close/	], 
+		],
+	],
 	
 	[ '~Controls',
 		[
@@ -1256,88 +1241,4 @@ sub	menu_bar_items # ===========================
 		],
 	],
 ];
-}
-
-sub	search # ===================================
-# 
-# ==================================================
-{
-	my ( $search_string, $be_widjet, $txt_widjet ) = @_;
-	my %searches =();
-	# Add search string to list if it's not already there
-	if(! exists $searches{ $search_string } ) 
-	{
-		$be_widjet -> insert( 'end', $search_string );
-	}
-	$searches{ $search_string }++;
-  
-	# Calculate where to search from, and what to highlight next  
-	my $startindex = 'insert';
-	if( defined $txt_widjet -> tagRanges( 'curSel' ) ) 
-	{ 
-		$startindex = 'curSel.first + 1 chars'; 
-	}    
-	my $index = $txt_widjet -> search( '-nocase', $search_string, $startindex );
-	if( $index ne '' ) 
-	{
-		$txt_widjet -> tagRemove( 'curSel', '1.0', 'end' );
-		my $endindex = "$index + " . ( length $search_string ) . " chars";
-		$txt_widjet -> tagAdd( 'curSel', $index, $endindex );
-		$txt_widjet -> see( $index );
-	} 
-	else 
-	{
-		$mw -> bell; 
-	}
-	$be_widjet -> selectionRange( 0, 'end' ); # Select word we just typed/selected
-}
-
-sub	window # ===================================
-# Opens a window with label of single .txt file on it.
-# ==================================================
-{
-	my ( $ttl, $txt ) = @_;
-
-	my $win	= new MainWindow( -title => $ttl );
-	my $frm	= $win -> Frame() -> pack();
-	my $lbl	= q{};
-	
-	open( IN, $txt );
-	while( <IN> )
-	{
-		chomp;
-		$lbl = $frm -> Label( -text => $_ ) -> pack();
-	}
-	close IN;
-}
-
-# sub	pdf_handler # ==============================
-# # 
-# # ==================================================
-# {
-	# my $pdf_w =  new MainWindow;
-	# $pdf_w -> title( "PDF" );	
-	# MainLoop();
-# }
-
-sub	_widget_activator # ========================
-# Unlocks an array of widgets for further usage.
-# ==================================================
-{
-	my @widgets = @_;
-	for( my $i = 0; $i <= $#widgets; $i++ )
-	{
-		$widgets[ $i ] -> configure( -state => 'active' );
-	}
-}
-
-sub	_widget_deactivator # ======================
-# Locks an array of widgets for further usage.
-# ==================================================
-{
-	my @widgets = @_;
-	for( my $i = 0; $i <= $#widgets; $i++ )
-	{
-		$widgets[ $i ] -> configure( -state => 'disabled' );
-	}
 }
