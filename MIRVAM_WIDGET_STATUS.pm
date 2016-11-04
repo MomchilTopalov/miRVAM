@@ -1,11 +1,20 @@
-package WidgetStatus;
+package MIRVAM_WIDGET_STATUS;
 
 use strict;
 use Exporter;
 use vars qw( @ISA @EXPORT );
 
 @ISA         = qw(Exporter);
-@EXPORT      = qw(widgetActivator widgetDeactivator);
+@EXPORT      = qw(widgetDefaultState widgetActivator widgetDeactivator);
+
+sub	widgetDefaultState # =======================
+# If a widget has a status at all, it should be 'disabled' 
+# by default in order to be (un)locked only when it is needed.
+# ==================================================
+{
+	my $default_state ='disabled' ;
+	return $default_state;
+}
 
 sub	widgetActivator # ==========================
 # Unlocks an array of widgets for further usage.

@@ -20,7 +20,6 @@ use warnings;
 use autodie;
 use utf8;
 use Readonly;
-# use subs qw/menu_bar_items/;
 
 #	CPAN MODULES
 use Tk;
@@ -36,17 +35,18 @@ use GD::Graph;
 use GD::Graph::bars;
 
 #	CUSTOM MODULES
-use WidgetStatus;
 use SetTitle;
 use Search;
-use Window;
+use MIRVAM_MENU;
+use MIRVAM_WIDGET_STATUS;
+use ProgressColours;
 
 #	==========	==========	==========	==========	<GLOBAL VARIABLES>
 my $time = localtime ();					# FOR WELCOMING MESSAGE
 my ( @dir_content, @fasta_array, @res_rlc ) 
 = ( (), (), () );						# FILE I/O
 my ( $workspace, $referent_DB ) = ( q{}, q{} );			# FILEHANDLER VARIABLES
-my $state = 'disabled';						# BUTTONS` STATE
+
 my ( $isF, $isR, $isT, $isS, $isMT, ) = ( 0, 0, 0, 0, 0, );	# RADIOBUTTONS VARIABLES
 my ( $redT, $redF, $tabT, $tabF, $matT, $matF, ) 
 	= ( 0, 0, 0, 0, 0, 0, );				# RADIOBUTTON FUNCS	
@@ -56,29 +56,6 @@ my ( $scale_from, $scale_to,) = ( 15, 30, );			# INTERVAL
 my ( $search_incounter, $search_inmatch ) = ( q{}, q{} );	# SEARCH
 my %hist_data = ();						# HISTOGRAM ATRIBUTES
 my ( $progress_c, $progress_m ) = ( 0, 0, );			# PROGRESSBAR VARIABLES
-my @colors = ( 
-	 0, '#ff002a',  1, '#ff0014',  2, '#ff000a',  3, '#ff0500',  4, '#ff1000',
-	 5, '#ff1b00',  6, '#ff3000',  7, '#ff3b00',  8, '#ff4600',  9, '#ff5100',
-	10, '#ff6100', 11, '#ff7600', 12, '#ff8100', 13, '#ff8c00', 14, '#ff9700',
-	15, '#ffa100', 16, '#ffbc00', 17, '#ffc700', 18, '#ffd200', 19, '#ffdd00',
-	20, '#ffe700', 21, '#fffd00', 22, '#f0ff00', 23, '#e5ff00', 24, '#dbff00',
-	25, '#d0ff00', 26, '#baff00', 27, '#afff00', 28, '#9fff00', 29, '#95ff00',
-	30, '#8aff00', 31, '#74ff00', 32, '#6aff00', 33, '#5fff00', 34, '#54ff00',
-	35, '#44ff00', 36, '#2eff00', 37, '#24ff00', 38, '#19ff00', 39, '#0eff00',
-	40, '#03ff00', 41, '#00ff17', 42, '#00ff21', 43, '#00ff2c', 44, '#00ff37',
-	45, '#00ff42', 46, '#00ff57', 47, '#00ff67', 48, '#00ff72', 49, '#00ff7d',
-	50, '#00ff87', 51, '#00ff9d', 52, '#00ffa8', 53, '#00ffb8', 54, '#00ffc3',
-	55, '#00ffcd', 56, '#00ffe3', 57, '#00ffee', 58, '#00fff8', 59, '#00faff',
-	60, '#00eaff', 61, '#00d4ff', 62, '#00c9ff', 63, '#00bfff', 64, '#00b4ff',
-	65, '#00a9ff', 66, '#008eff', 67, '#0083ff', 68, '#0079ff', 69, '#006eff',
-	70, '#0063ff', 71, '#004eff', 72, '#003eff', 73, '#0033ff', 74, '#0028ff',
-	75, '#001dff', 76, '#0008ff', 77, '#0200ff', 78, '#1200ff', 79, '#1d00ff',
-	80, '#2800ff', 81, '#3d00ff', 82, '#4800ff', 83, '#5300ff', 84, '#5d00ff',
-	85, '#6e00ff', 86, '#8300ff', 87, '#8e00ff', 88, '#9900ff', 89, '#a300ff',
-	90, '#ae00ff', 91, '#c900ff', 92, '#d400ff', 93, '#df00ff', 94, '#e900ff',
-	95, '#f400ff', 96, '#ff00f3', 97, '#ff00e3', 98, '#ff00d9', 99, '#ff00ce',
-	);	
-Readonly my $line	=> q{"};				# MENU_SEPARATOR
 Readonly my $sp		=> q/ /;				# SPACE
 
 #	==========	==========	==========	==========	</GLOBAL VARIABLES>
@@ -110,30 +87,30 @@ $txt_status	-> insert('end', "Welcome to miRVAM.\n"
 	
 my $fr_buttons	= $fr_len_distribution	-> Frame();	
 my $bttn_open	= $fr_buttons	-> Button(
-	-image		=> $fr_buttons	-> Photo( -file => 'open.jpg' ),
+	-image		=> $fr_buttons	-> Photo( -file => 'pic\open.jpg' ),
 	-activebackground => 'yellow',	
 	-command	=> \&B_OPEN_DIR,
 	);
 my $bttn_count	= $fr_buttons	-> Button(
-	-image		=> $fr_buttons	-> Photo( -file => 'count.jpg' ),
+	-image		=> $fr_buttons	-> Photo( -file => 'pic\count.jpg' ),
 	-activebackground => 'yellow',	
-	-state		=> $state,
+	-state		=> widgetDefaultState(),
 	-command	=> sub{ &B_COUNT_MIRNA( @fasta_array ) }, 
 	);
 my $bttn_hmode	= $fr_buttons	-> Button(
-	-image		=> $fr_buttons	-> Photo( -file => 'hist.jpg' ),
+	-image		=> $fr_buttons	-> Photo( -file => 'pic\hist.jpg' ),
 	-activebackground => 'yellow',
-	-state		=> $state,
+	-state		=> widgetDefaultState(),
 	-command	=> \&B_HIST_MODE,
 	);
 my $bttn_mmode	= $fr_buttons	-> Button(
-	-image		=> $fr_buttons	-> Photo( -file => 'match.jpg' ),
+	-image		=> $fr_buttons	-> Photo( -file => 'pic\match.jpg' ),
 	-activebackground => 'yellow',	
-	-state		=> $state,
+	-state		=> widgetDefaultState(),
 	-command	=> \&B_MATCH_MODE, 
 	);
 my $bttn_reset	= $fr_buttons	-> Button(
-	-image		=> $fr_buttons	-> Photo( -file => 'reset.jpg' ),
+	-image		=> $fr_buttons	-> Photo( -file => 'pic\reset.jpg' ),
 	-activebackground => 'yellow',
 	-command	=> \&B_RESET_ALL, 
 	);
@@ -155,7 +132,7 @@ my $rbttn_nontab	= $fr_radiobttns	-> Radiobutton(
 	-font		=> '-*-Calibri-R-Normal-*-*-12' ,
 	-value		=> 1,		
 	-variable	=> \$isT,
-	-state		=> $state,	
+	-state		=> widgetDefaultState(),	
 	-command	=> sub { ( $tabT, $tabF, ) = ( 0, 1, ) },
 	);
 my $rbbtn_tab	= $fr_radiobttns	-> Radiobutton(
@@ -163,7 +140,7 @@ my $rbbtn_tab	= $fr_radiobttns	-> Radiobutton(
 	-font		=> '-*-Calibri-R-Normal-*-*-12' ,
 	-value		=> 2,		
 	-variable	=> \$isT,
-	-state		=> $state,	
+	-state		=> widgetDefaultState(),	
 	-command 	=> sub { ( $tabT, $tabF, ) = ( 1, 0, ) },
 	);
 my $lbl_dataset	= $fr_radiobttns -> Label(
@@ -175,7 +152,7 @@ my $rbttn_red	= $fr_radiobttns -> Radiobutton(
 	-font		=> '-*-Calibri-R-Normal-*-*-12' ,
 	-value		=> 1,		
 	-variable	=> \$isR,
-	-state		=> $state,	
+	-state		=> widgetDefaultState(),	
 	-command	=> sub { ( $redT, $redF, ) = ( 1, 0, ) },
 	);
 my $rbttn_nonred	= $fr_radiobttns -> Radiobutton(
@@ -183,7 +160,7 @@ my $rbttn_nonred	= $fr_radiobttns -> Radiobutton(
 	-font		=> '-*-Calibri-R-Normal-*-*-12' ,
 	-value		=> 2,		
 	-variable	=> \$isR,
-	-state		=> $state,	
+	-state		=> widgetDefaultState(),	
 	-command	=> sub	{ ( $redT, $redF, ) = ( 0, 1, ) },
 	);
 	
@@ -197,7 +174,7 @@ my $scale_down	= $fr_scale	-> Scale(
 	-digit		=>  1,	
 	-from		=> 15,	
 	-to		=> 20,
-	-state		=> $state,	
+	-state		=> widgetDefaultState(),	
 	-variable => \$scale_from, 
 	);
 my $scale_label	= $fr_scale	-> Label(
@@ -213,7 +190,7 @@ my $scale_up	= $fr_scale	-> Scale(
 	-digit		=>  1,	
 	-from		=> 25,		
 	-to		=> 30,	
-	-state		=> $state,	
+	-state		=> widgetDefaultState(),	
 	-variable 	=> \$scale_to, 
 	);
 	
@@ -243,17 +220,17 @@ my $be_rlc	= $fr_results	-> BrowseEntry(
 	-variable	=> \$search_incounter, 
 	);
 my $bttn_src_rlc	= $fr_results	->Button(
-	-image		=> $fr_results -> Photo( -file => 'search.png' ),
+	-image		=> $fr_results -> Photo( -file => 'pic\search.png' ),
 	-activebackground => 'blue', 
-	-state 		=> $state,
+	-state 		=> widgetDefaultState(),
 	-command 	=> sub{ 
-		search( $search_incounter, $be_rlc, $txt_results ) 
+		&Search::search( $search_incounter, $be_rlc, $txt_results ) 
 		}, 
 	);	
 my $bttn_saveC	= $fr_results	->Button(
-	-image		=> $fr_results -> Photo( -file => 'save.png' ),
+	-image		=> $fr_results -> Photo( -file => 'pic\save.png' ),
 	-activebackground => 'blue',	
-	-state		=> $state,
+	-state		=> widgetDefaultState(),
 	-command 	=> sub{ 
 		&SAVE( 'length_distribution.txt', @res_rlc ) 
 		},
@@ -268,7 +245,7 @@ my $progress_rlc	= $fr_progress	-> ProgressBar(
 	-gap		=>   0,
 	-from		=>   0,		
 	-to		=> 100,
-	-colors		=> \@colors,
+	-colors		=> \@ProgressColours::colours,
 	-troughcolor	=> 'white',
 	-relief 	=> 'sunken',
 	-anchor		=> 's',		
@@ -295,21 +272,21 @@ my $lbl_info	= $fr_histbox	->Label(
 	
 my $fr_histopt	= $fr_histbox	-> Frame();	
 my $bttn_show_h	= $fr_histopt	-> Button(
-	-image		=> $fr_histopt	-> Photo( -file	=> 'show_hist.png' ),
+	-image		=> $fr_histopt	-> Photo( -file	=> 'pic\show_hist.png' ),
 	-activebackground => 'orange',	
-	-state		=> $state,
+	-state		=> widgetDefaultState(),
 	-command	=> sub{ &H_show_hist() }, 
 	);  
 my $bttn_save_oneh	= $fr_histopt	-> Button(
-	-image		=> $fr_histopt	-> Photo( -file	=> 'save_hist.png' ),
+	-image		=> $fr_histopt	-> Photo( -file	=> 'pic\save_hist.png' ),
 	-activebackground => 'yellow',	
-	-state		=> $state,
+	-state		=> widgetDefaultState(),
 	-command	=> sub{ &H_show_hist(), &H_save_oneh(), }, 
 	);  
 my $buttn_save_allh	= $fr_histopt	-> Button(
-	-image		=> $fr_histopt	-> Photo( -file => 'save_allhist.png' ),
+	-image		=> $fr_histopt	-> Photo( -file => 'pic\save_allhist.png' ),
 	-activebackground => 'green',	
-	-state		=> $state,
+	-state		=> widgetDefaultState(),
 	-command	=>  sub{ &H_save_allh( &_hist( 1, %hist_data ) ) }, 
 	);
 my $lbl_hist	= $fr_histbox -> Label(
@@ -326,7 +303,7 @@ my $progress_ref	= $fr_progress_m	-> ProgressBar(
 	-gap		=>   0,
 	-from		=>   0,		
 	-to		=> 100,
-	-colors		=> \@colors,
+	-colors		=> \@ProgressColours::colours,
 	-troughcolor	=> 'white',
 	-relief 	=> 'sunken',
 	-anchor		=> 's',		
@@ -350,7 +327,7 @@ my $rbbt_ref_nontab	= $fr_outer_rb	 -> Radiobutton(
 	-font		=> '-*-Calibri-R-Normal-*-*-14' ,
 	-value		=> 1,		
 	-variable	=> \$isMT,
-	-state		=> $state,	
+	-state		=> widgetDefaultState(),	
 	-command	=> sub { ( $matT, $matF, ) = ( 0, 1, ) },	
 	);
 my $rbbt_ref_tab	= $fr_outer_rb	 -> Radiobutton(
@@ -358,7 +335,7 @@ my $rbbt_ref_tab	= $fr_outer_rb	 -> Radiobutton(
 	-font		=> '-*-Calibri-R-Normal-*-*-14' ,
 	-value		=> 2,		
 	-variable	=> \$isMT,
-	-state		=> $state,	
+	-state		=> widgetDefaultState(),	
 	-command	=> sub { ( $matT, $matF, ) = ( 1, 0, ) },
 	);
 
@@ -370,31 +347,31 @@ my $lbl_pattern	= $fr_outer_cb	-> Label(
 my $cb1	= $fr_outer_cb -> Checkbutton(
 	-text		=> "Ref DB miRNA header\t|",
 	-font		=> '-*-Calibri-R-Normal-*-*-12' ,
-	-state		=> $state,	
+	-state		=> widgetDefaultState(),	
 	-variable	=>\$var1, 
         );	
 my $cb2	= $fr_outer_cb -> Checkbutton(
 	-text		=>  "Sample miRNA header\t|",
 	-font		=> '-*-Calibri-R-Normal-*-*-12' ,
-        -state		=> $state,	
+        -state		=> widgetDefaultState(),	
         -variable	=>\$var2, 
         );	 
 my $cb3	= $fr_outer_cb -> Checkbutton(
 	-text		=> "Matched sequences\t|",
 	-font		=> '-*-Calibri-R-Normal-*-*-12' ,
-        -state		=> $state,	
+        -state		=> widgetDefaultState(),	
         -variable	=>\$var3, 
         );
 my $cb_TU	= $fr_outer_cb -> Checkbutton(
 	-text		=> "Convert U to T\t|",
 	-font		=> '-*-Calibri-R-Normal-*-*-12' ,
-        -state		=> $state,	
+        -state		=> widgetDefaultState(),	
         -variable	=>\$var_TU, 
         );
 my $cb4	= $fr_outer_cb -> Checkbutton(
 	-text		=> "Lenght of the sequences\t|",
 	-font		=> '-*-Calibri-R-Normal-*-*-12' ,
-        -state		=> $state,	
+        -state		=> widgetDefaultState(),	
         -variable	=>\$var4, 
         );	
 
@@ -420,22 +397,22 @@ my $be_match	= $fr_outertxt	-> BrowseEntry(
 	-variable	=> \$search_inmatch, 
 	);
 my $bttn_src_ref	= $fr_outertxt	-> Button(
-	-image		=> $fr_outertxt -> Photo( -file	=> 'search.png' ),
+	-image		=> $fr_outertxt -> Photo( -file	=> 'pic\search.png' ),
 	-activebackground	=> 'blue',	
-	-state		=> $state,
+	-state		=> widgetDefaultState(),
 	-command	=> sub{ 
 		search( $search_inmatch, $be_match, $txt_compare ) }, 
 	);
 my $bttn_match_one	= $fr_outertxt	-> Button(
-	-image		=> $fr_outertxt -> Photo ( -file => 'match_one.png' ),
+	-image		=> $fr_outertxt -> Photo ( -file => 'pic\match_one.png' ),
 	-activebackground	=> 'yellow',	
-	-state		=> $state,
+	-state		=> widgetDefaultState(),
 	-command	=> \&M_match_one,
 	);
 my $bttn_match_all	= $fr_outertxt	->Button(
-	-image		=> $fr_outertxt -> Photo( -file	=>'match_all.png' ),
+	-image		=> $fr_outertxt -> Photo( -file	=> 'pic\match_all.png' ),
 	-activebackground	=> 'orange',	
-	-state		=> $state,
+	-state		=> widgetDefaultState(),
 	-command	=> \&M_match_all, 
 	);
 { #	==========	==========	==========	==========	<MOUSEOVER>
@@ -1159,86 +1136,4 @@ sub	SAVE # =====================================
 	open( my $fh, '>', $file_path );
 	print $fh @toPrint;
 	close $fh;
-}
-
-sub	menu_bar_items # ===========================
-# The MENU of the program.
-# ==================================================
-{
-	[ map [ 'cascade', $_ -> [ 0 ], -menuitems => $_ -> [ 1 ] ],
-
-	[ '~File',
-		[
-			[ qw/command Open -command/	=> \&open_dir		],	$line,
-			[ qw/command Run -command/	=> \&results_handler	],	$line,
-			[ qw/command Save  -command/	=> \&save_file		],	$line,
-			[ qw/command Close/					],       $line,
-			[ qw/command Quit -command/	=> \&exit		],
-		],
-	],
-	[ '~Sample verification',
-		[
-			[ qw/command Redundant -command/	=> \&redT	],
-			[ qw/command Non-redundant -command/	=> \&redF	],	$line,
-			[ qw/command Non-tabulated -command/	=> \&tabF	],
-			[ qw/command Tabulated -command/	=> \&tabT	],	$line,
-			[ qw/cascade Set_interval_from -menuitems/ =>
-				[
-					[ 'command', 15, -command => \sub { $scale_from = 15 } ],
-					[ 'command', 16, -command => \sub { $scale_from = 16 } ],
-					[ 'command', 17, -command => \sub { $scale_from = 17 } ],
-					[ 'command', 18, -command => \sub { $scale_from = 18 } ],
-					[ 'command', 19, -command => \sub { $scale_from = 19 } ],
-					[ 'command', 20, -command => \sub { $scale_from = 20 } ],
-				],
-			],
-			[ qw/cascade Set_interval_to -menuitems/ =>
-				[
-					[ 'command', 25, -command => \sub { $scale_to = 25 } ],
-					[ 'command', 26, -command => \sub { $scale_to = 26 } ],
-					[ 'command', 27, -command => \sub { $scale_to = 27 } ],
-					[ 'command', 28, -command => \sub { $scale_to = 28 } ],
-					[ 'command', 29, -command => \sub { $scale_to = 29 } ],
-					[ 'command', 30, -command => \sub { $scale_to = 30 } ],
-				],
-			],	$line,
-			[ qw/command Reset -command/		=> \&reset	],	$line,
-			[ qw/command Close/	],
-		],
-	],
-	[ '~Histogram mode',
-		[
-			[ qw/command Show_histogram -command/	=> \&show_hist	],
-			[ qw/command Save_histogram -command/	=> \&save_oneh	],
-			[ qw/command Save_all_hist -command/	=> \&save_allh	],	$line,
-			[ qw/command Close/	], 
-		], 
-	],
-	[ '~Match mode',
-		[
-			[ qw/command Non-tabulated -command/	=> \&matF	],
-			[ qw/command Tabulated -command/	=> \&matT	],	$line,
-			[ qw/command Close/	], 
-		],
-	],
-	
-	[ '~Controls',
-		[
-			[ qw/command HotKeys -command/	=> \sub { window( qw/Controls controls.txt/ ) }	],	$line,
-			[ qw/command Close/	], 
-		],
-	],
-	[ '~Help',
-		[
-			# [ qw/cascade Manual -menuitems/		=>
-				# [
-					# [ 'command', 'READ_ME(.pdf)', -command => \&pdf_handler	],
-				# ],
-			# ],
-			[ qw/command Version -command/	=> \sub { window( qw/Version version.txt/ ) }	],
-			[ qw/command About -command/	=> \sub { window( qw/About about.txt/ ) }	],	$line,
-			[ qw/command Close/	], 
-		],
-	],
-];
 }
